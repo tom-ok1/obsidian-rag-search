@@ -1,8 +1,20 @@
 import { VectorStore } from "@langchain/core/vectorstores";
-import { Document, DocumentInterface } from "@langchain/core/documents";
+import {
+	Document,
+	DocumentInput,
+	DocumentInterface,
+} from "@langchain/core/documents";
 import { EmbeddingsInterface } from "@langchain/core/embeddings";
-import { create, insertMultiple, load, Orama, save } from "@orama/orama";
-import { FileAdapter } from "./adapters/fileAdapter";
+import {
+	create,
+	insertMultiple,
+	load,
+	Orama,
+	save,
+	search,
+	WhereCondition,
+} from "@orama/orama";
+import { FileAdapter } from "../adapters/fileAdapter";
 
 type DocumentRawSchema = {
 	id: "string";
@@ -18,7 +30,6 @@ type DocumentRawSchema = {
 	extension: "string";
 };
 
-// Extracted metadata fields for Orama documents
 type DocumentMetadata = {
 	title?: string;
 	path?: string;
@@ -30,7 +41,6 @@ type DocumentMetadata = {
 	embeddingModel?: string;
 };
 
-// Complete document schema for Orama, combining metadata and content fields
 type DocumentSchema = {
 	id?: string;
 	content?: string;
@@ -39,13 +49,19 @@ type DocumentSchema = {
 
 type ObsidianDocumentInterface = DocumentInterface<DocumentMetadata>;
 
+export class ObsidianDocument extends Document<DocumentMetadata> {
+	constructor(fields: DocumentInput<DocumentMetadata>) {
+		super(fields);
+	}
+}
+
 interface OramaStoreConfig {
 	dbPath: string;
 }
 
 export class OramaStore extends VectorStore {
 	private readonly dbConfig: OramaStoreConfig;
-	private db: Orama<ReturnType<typeof this.documentSchema>>;
+	private db: Orama<DocumentRawSchema>;
 
 	private constructor(
 		private readonly file: FileAdapter,
@@ -132,17 +148,25 @@ export class OramaStore extends VectorStore {
 		return documents.map(({ id }) => id).filter((id) => id !== undefined);
 	}
 
-	similaritySearchVectorWithScore(
+	async similaritySearchVectorWithScore(
 		query: number[],
 		k: number,
-		filter?: this["FilterType"] | undefined
+		filter?: Partial<WhereCondition<DocumentRawSchema>>
 	): Promise<[ObsidianDocumentInterface, number][]> {
-		return new Promise((resolve) => {
-			const doc = new Document({
-				pageContent: "test",
-			});
-			resolve([[doc, 1.0]]);
+		const results = await search(this.db, {
+			mode: "vector",
+			vector: { value: query, property: "embedding" },
+			limit: k,
+			where: filter,
 		});
+		return results.hits.map(({ document, score }) => [
+			{
+				id: document.id,
+				pageContent: document.content,
+				metadata: document.metadata,
+			},
+			score,
+		]);
 	}
 
 	private mapDocumentToSchema(
