@@ -1,7 +1,7 @@
 import { VectorStore } from "@langchain/core/vectorstores";
 import { Document, DocumentInterface } from "@langchain/core/documents";
 import { Embeddings, EmbeddingsInterface } from "@langchain/core/embeddings";
-import { create, Orama, save } from "@orama/orama";
+import { create, load, Orama, save } from "@orama/orama";
 import { FileAdapter } from "./adapters/fileAdapter";
 
 export class OramaStore extends VectorStore {
@@ -17,12 +17,9 @@ export class OramaStore extends VectorStore {
 		return "orama";
 	}
 
-	async createNewDb(
-		embeddingInstance: Embeddings,
-		path: string
-	): Promise<Orama<any>> {
+	async createNewDb(path: string): Promise<Orama<any>> {
 		const sampleText = "Sample text for embedding";
-		const sampleEmbedding = await embeddingInstance.embedQuery(sampleText);
+		const sampleEmbedding = await this.embeddings.embedQuery(sampleText);
 		const vectorLength = sampleEmbedding.length;
 		const db = await create({
 			schema: {
@@ -46,6 +43,16 @@ export class OramaStore extends VectorStore {
 			2
 		);
 		this.file.write(path, jsonData);
+		return db;
+	}
+
+	async loadDb(path: string): Promise<Orama<any>> {
+		const rawdata = await this.file.read(path);
+		const parsedData = JSON.parse(rawdata);
+		const db = await create({
+			schema: parsedData.schema,
+		});
+		await load(db, parsedData);
 		return db;
 	}
 
@@ -77,6 +84,7 @@ export class OramaStore extends VectorStore {
 			const doc = new Document({
 				pageContent: "test",
 			});
+			resolve([[doc, 1.0]]);
 		});
 	}
 }
