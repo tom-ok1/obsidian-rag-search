@@ -1,10 +1,11 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { OramaStore } from "./db";
 import { Embeddings } from "@langchain/core/embeddings";
 import * as fs from "fs";
 import * as path from "path";
-import { Orama, create, save } from "@orama/orama";
+import { Orama, create, save, search } from "@orama/orama";
 import { LocalFileAdapter } from "./adapters/LocalFileAdapter";
+import { Document } from "@langchain/core/documents";
 
 class MockEmbeddings extends Embeddings {
 	private dimensions: number;
@@ -23,6 +24,24 @@ class MockEmbeddings extends Embeddings {
 	}
 }
 
+async function createMockDb(embeddingDimensions: number) {
+	return await create({
+		schema: {
+			id: "string",
+			title: "string",
+			path: "string",
+			content: "string",
+			embedding: `vector[${embeddingDimensions}]`,
+			embeddingModel: "string",
+			created_at: "number",
+			ctime: "number",
+			mtime: "number",
+			tags: "string[]",
+			extension: "string",
+		},
+	});
+}
+
 describe("OramaStore", () => {
 	const testDbPath = path.join(__dirname, "test-orama-db.json");
 	const localFileAdapter = new LocalFileAdapter();
@@ -37,24 +56,7 @@ describe("OramaStore", () => {
 		const mockEmbeddingDimensions = 128;
 		const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
 
-		// Create a proper Orama instance using the create function
-		const mockOramaDb = await create({
-			schema: {
-				id: "string",
-				title: "string",
-				path: "string",
-				content: "string",
-				embedding: `vector[${mockEmbeddingDimensions}]`,
-				embeddingModel: "string",
-				created_at: "number",
-				ctime: "number",
-				mtime: "number",
-				tags: "string[]",
-				extension: "string",
-			},
-		});
-
-		// Save the properly created Orama instance
+		const mockOramaDb = await createMockDb(mockEmbeddingDimensions);
 		const rawdata = await save(mockOramaDb);
 		const jsonData = JSON.stringify(
 			{ ...rawdata, schema: mockOramaDb.schema },
@@ -64,29 +66,33 @@ describe("OramaStore", () => {
 		fs.writeFileSync(testDbPath, jsonData);
 		expect(fs.existsSync(testDbPath)).toBe(true);
 
-		const store = new OramaStore(localFileAdapter, mockEmbeddings, {
-			dbPath: testDbPath,
-		});
-
-		const loadedDb = await store.loadDb(testDbPath);
-
-		expect(loadedDb).toBeDefined();
-		expect(loadedDb.schema).toEqual(mockOramaDb.schema);
-		expect(loadedDb.schema.embedding).toBe(
-			`vector[${mockEmbeddingDimensions}]`
+		const store = await OramaStore.create(
+			localFileAdapter,
+			mockEmbeddings,
+			{
+				dbPath: testDbPath,
+			}
 		);
+
+		const db = (store as any).db as Orama<any>;
+
+		expect(store).toBeDefined();
+		expect(db.schema).toEqual(mockOramaDb.schema);
 	});
 
 	it("should create a new db with the correct vector length", async () => {
 		const mockEmbeddingDimensions = 256;
 		const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
 
-		const store = new OramaStore(localFileAdapter, mockEmbeddings, {
-			dbPath: testDbPath,
-		});
-		const db = await store.createNewDb(testDbPath);
+		const store = await OramaStore.create(
+			localFileAdapter,
+			mockEmbeddings,
+			{
+				dbPath: testDbPath,
+			}
+		);
 
-		expect(db).toBeDefined();
+		expect(store).toBeDefined();
 		expect(fs.existsSync(testDbPath)).toBe(true);
 
 		const dbContent: Orama<any> = JSON.parse(
@@ -95,5 +101,60 @@ describe("OramaStore", () => {
 		expect(dbContent.schema.embedding).toBe(
 			`vector[${mockEmbeddingDimensions}]`
 		);
+	});
+
+	it("should add documents to the database", async () => {
+		const mockEmbeddingDimensions = 128;
+		const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
+		const testDocs = [
+			new Document({
+				id: "doc1",
+				pageContent: "Test document 1",
+				metadata: {
+					id: "doc1",
+					title: "Test 1",
+					path: "/test/1",
+					extension: "md",
+					tags: ["test"],
+					ctime: Date.now(),
+					mtime: Date.now(),
+				},
+			}),
+			new Document({
+				id: "doc2",
+				pageContent: "Test document 2",
+				metadata: {
+					id: "doc2",
+					title: "Test 2",
+					path: "/test/2",
+					extension: "md",
+					tags: ["test"],
+					ctime: Date.now(),
+					mtime: Date.now(),
+				},
+			}),
+		];
+
+		const store = await OramaStore.create(
+			localFileAdapter,
+			mockEmbeddings,
+			{
+				dbPath: testDbPath,
+			}
+		);
+
+		const docIds = await store.addDocuments(testDocs);
+
+		expect(docIds).toBeDefined();
+		expect(docIds).toHaveLength(2);
+
+		const db = (store as any).db as Orama<any>;
+
+		// Check if documents are added to the db
+		const results = await search(db, {
+			mode: "fulltext",
+			term: "Test",
+		});
+		expect(results.hits).toHaveLength(2);
 	});
 });

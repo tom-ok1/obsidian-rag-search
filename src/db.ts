@@ -1,23 +1,62 @@
 import { VectorStore } from "@langchain/core/vectorstores";
 import { Document, DocumentInterface } from "@langchain/core/documents";
-import { Embeddings, EmbeddingsInterface } from "@langchain/core/embeddings";
-import { create, load, Orama, save } from "@orama/orama";
+import { EmbeddingsInterface } from "@langchain/core/embeddings";
+import { create, insertMultiple, load, Orama, save } from "@orama/orama";
 import { FileAdapter } from "./adapters/fileAdapter";
 
+interface OramaStoreConfig {
+	dbPath: string;
+}
+
+type OramaSchema = {
+	id?: string;
+	title?: string;
+	path?: string;
+	content?: string;
+	embedding?: number[];
+	embeddingModel?: string;
+	created_at?: number;
+	ctime?: number;
+	mtime?: number;
+	tags?: string[];
+	extension?: string;
+};
+
 export class OramaStore extends VectorStore {
-	constructor(
+	private readonly dbConfig: OramaStoreConfig;
+	private db: Orama<any>;
+
+	private constructor(
 		private readonly file: FileAdapter,
 		embeddings: EmbeddingsInterface,
-		dbConfig: Record<string, any>
+		dbConfig: OramaStoreConfig
 	) {
 		super(embeddings, dbConfig);
+		this.dbConfig = dbConfig;
 	}
 
 	_vectorstoreType(): string {
 		return "orama";
 	}
 
-	async createNewDb(path: string): Promise<Orama<any>> {
+	static async create(
+		file: FileAdapter,
+		embeddings: EmbeddingsInterface,
+		dbConfig: OramaStoreConfig
+	): Promise<OramaStore> {
+		const store = new OramaStore(file, embeddings, dbConfig);
+
+		const isExists = await store.file.exists(dbConfig.dbPath);
+		if (isExists) {
+			store.db = await store.loadDb(dbConfig.dbPath);
+		} else {
+			store.db = await store.createNewDb();
+		}
+
+		return store;
+	}
+
+	private async createNewDb(): Promise<Orama<any>> {
 		const sampleText = "Sample text for embedding";
 		const sampleEmbedding = await this.embeddings.embedQuery(sampleText);
 		const vectorLength = sampleEmbedding.length;
@@ -42,11 +81,11 @@ export class OramaStore extends VectorStore {
 			null,
 			2
 		);
-		this.file.write(path, jsonData);
+		this.file.write(this.dbConfig.dbPath, jsonData);
 		return db;
 	}
 
-	async loadDb(path: string): Promise<Orama<any>> {
+	private async loadDb(path: string): Promise<Orama<any>> {
 		const rawdata = await this.file.read(path);
 		const parsedData = JSON.parse(rawdata);
 		const db = await create({
@@ -66,13 +105,29 @@ export class OramaStore extends VectorStore {
 		});
 	}
 
-	addDocuments(
-		documents: DocumentInterface[],
-		options?: { [x: string]: any }
+	async addDocuments(
+		documents: DocumentInterface[]
 	): Promise<string[] | void> {
-		return new Promise((resolve) => {
-			resolve(["resolved"]);
-		});
+		const vectorizedDocuments = await this.embeddings.embedDocuments(
+			documents.map((doc) => doc.pageContent)
+		);
+		const documentsWithEmbeddings: OramaSchema[] = documents.map(
+			(doc, index) => ({
+				id: doc.id,
+				title: doc.metadata.title,
+				path: doc.metadata.path,
+				content: doc.pageContent,
+				tags: doc.metadata.tags,
+				extension: doc.metadata.extension,
+				created_at: doc.metadata.created_at,
+				ctime: doc.metadata.ctime,
+				mtime: doc.metadata.mtime,
+				embeddingModel: doc.metadata.embeddingModel,
+				embedding: vectorizedDocuments[index],
+			})
+		);
+		await insertMultiple(this.db, documentsWithEmbeddings);
+		return documents.map(({ id }) => id).filter((id) => id !== undefined);
 	}
 
 	similaritySearchVectorWithScore(
