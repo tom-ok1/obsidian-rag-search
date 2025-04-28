@@ -7,7 +7,13 @@ export class LocalFileAdapter implements FileAdapter {
 	async read(filePath: string): Promise<string> {
 		return fs.readFileSync(filePath, "utf-8");
 	}
-	async write(filePath: string, content: string): Promise<void> {
+	async write(
+		filename: string,
+		dirname: string,
+		content: string
+	): Promise<void> {
+		const filePath = path.join(dirname, filename);
+		fs.mkdirSync(dirname, { recursive: true });
 		fs.writeFileSync(filePath, content, "utf-8");
 	}
 	async delete(filePath: string): Promise<void> {
@@ -29,5 +35,8 @@ export class LocalFileAdapter implements FileAdapter {
 			mtime: stats.mtimeMs,
 			size: stats.size,
 		};
+	}
+	join(...paths: string[]): string {
+		return path.join(...paths);
 	}
 }

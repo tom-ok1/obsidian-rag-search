@@ -13,11 +13,11 @@
 	"author": "",
 	"license": "MIT",
 	"devDependencies": {
+		"@langchain/community": "^0.3.41",
+		"@langchain/core": "^0.3.49",
 		"@types/node": "^22.15.2",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
-		"@langchain/community": "^0.3.41",
-		"@langchain/core": "^0.3.49",
 		"builtin-modules": "3.3.0",
 		"esbuild": "0.17.3",
 		"obsidian": "latest",
