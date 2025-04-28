@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+import { describe, it, expect, afterEach, beforeEach } from "vitest";
 import { LocalFileAdapter } from "../adapters/LocalFileAdapter";
 import { OramaDb, getPartitionIndex } from "./oramaDb";
 import * as path from "path";
@@ -15,32 +15,64 @@ describe("OramaDb", () => {
 		embedding: "vector[3]",
 	} satisfies AnySchema;
 
-	// Sample test documents
 	const testDocuments = [
+		{ id: "docX", content: "Document X axis", embedding: [1, 0, 0] },
+		{ id: "docY", content: "Document Y axis", embedding: [0, 1, 0] },
+		{ id: "docZ", content: "Document Z axis", embedding: [0, 0, 1] },
 		{
-			id: "doc1",
-			content: "Document 1 content",
-			embedding: [0.1, 0.2, 0.3],
+			id: "doc111",
+			content: "Document in first octant",
+			embedding: [1, 1, 1],
 		},
 		{
-			id: "doc2",
-			content: "Document 2 content",
-			embedding: [0.4, 0.5, 0.6],
+			id: "docX2",
+			content: "Document close to X",
+			embedding: [0.9, 0.1, 0.1],
 		},
 		{
-			id: "doc3",
-			content: "Document 3 content",
-			embedding: [0.7, 0.8, 0.9],
+			id: "docY2",
+			content: "Document close to Y",
+			embedding: [0.1, 0.9, 0.1],
 		},
 		{
-			id: "doc4",
-			content: "Document 4 content",
-			embedding: [0.2, 0.3, 0.4],
+			id: "docZ2",
+			content: "Document close to Z",
+			embedding: [0.1, 0.1, 0.9],
 		},
 		{
-			id: "doc5",
-			content: "Document 5 content",
-			embedding: [0.5, 0.6, 0.7],
+			id: "docX3",
+			content: "Document with large magnitude in X",
+			embedding: [5, 0, 0],
+		},
+		{
+			id: "docXY",
+			content: "Document in XY plane",
+			embedding: [0.7071, 0.7071, 0],
+		},
+		{
+			id: "docXZ",
+			content: "Document in XZ plane",
+			embedding: [0.7071, 0, 0.7071],
+		},
+		{
+			id: "simA1",
+			content: "Similar document A1",
+			embedding: [0.5, 0.5, 0.7071],
+		},
+		{
+			id: "simA2",
+			content: "Similar document A2",
+			embedding: [0.5, 0.5, 0.7071],
+		},
+		{
+			id: "simB1",
+			content: "Similar document B1",
+			embedding: [0.7071, 0.7071, 0.1],
+		},
+		{
+			id: "simB2",
+			content: "Similar document B2",
+			embedding: [0.7071, 0.7071, 0.1],
 		},
 	];
 
@@ -205,6 +237,59 @@ describe("OramaDb", () => {
 				expect(res.hits[0].document).toBeDefined();
 			}
 			expect(resultDocuments.length).toBe(testDocuments.length);
+		});
+	});
+
+	describe("search method", () => {
+		it("should search across all shards and return top k results ordered by score", async () => {
+			const numOfShards = 3;
+			const config = {
+				dirPath: testDirPath,
+				numOfShards,
+				schema: testSchema,
+			};
+			const documents = JSON.parse(JSON.stringify(testDocuments));
+
+			const oramaDb = await OramaDb.create(fileAdapter, config);
+			await oramaDb.insertMany(documents);
+
+			// Query vector along Z axis direction
+			const queryVector = [0, 0, 1];
+			const k = 3;
+
+			const results = await oramaDb.search(queryVector, k);
+			expect(results.length).toBeLessThanOrEqual(k);
+			expect(results[0].id).toBe("docZ");
+			expect(results[1].id).toBe("docZ2");
+			// Scores should be in ascending order (lower score = more similar)
+			expect(results[0].score).toBeGreaterThan(results[1].score);
+		});
+
+		it("should respect the filter parameter when searching", async () => {
+			const numOfShards = 3;
+			const config = {
+				dirPath: testDirPath,
+				numOfShards,
+				schema: testSchema,
+			};
+			const documents = JSON.parse(JSON.stringify(testDocuments));
+
+			const oramaDb = await OramaDb.create(fileAdapter, config);
+			await oramaDb.insertMany(documents);
+
+			const queryVector = [0.6, 0.7, 0.8];
+			const k = 5;
+
+			// Execute search with filter
+			const results = await oramaDb.search(queryVector, k, {
+				content: "close to",
+			});
+
+			// Should only return docs matching the filter, still ordered by similarity
+			expect(results.length).toBeLessThanOrEqual(3); // At most 3 docs (docX2, docY2, docZ2)
+			results.forEach((result) => {
+				expect(["docX2", "docY2", "docZ2"]).toContain(result.id);
+			});
 		});
 	});
 });

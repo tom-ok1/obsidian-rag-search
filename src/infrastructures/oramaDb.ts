@@ -8,6 +8,10 @@ import {
 	insertMultiple,
 	PartialSchemaDeep,
 	TypedDocument,
+	search,
+	WhereCondition,
+	Result,
+	Schema,
 } from "@orama/orama";
 import { storeFilename } from "./oramaStore";
 
@@ -144,5 +148,31 @@ export class OramaDb<T extends AnySchema> {
 		);
 
 		await Promise.all(insertPromises);
+	}
+
+	async search(
+		query: number[],
+		k: number,
+		filter?: WhereCondition<T>
+	): Promise<Result<Schema<T>>[]> {
+		if (this.shards.length === 0) {
+			return [];
+		}
+
+		// Search each shard
+		const searchPromises = this.shards.map(async (shard) => {
+			return await search(shard, {
+				mode: "vector",
+				vector: { value: query, property: "embedding" },
+				limit: k, // Request k results from each shard
+				where: filter,
+			});
+		});
+
+		const searchResults = await Promise.all(searchPromises);
+		return searchResults
+			.flatMap((result) => result.hits)
+			.sort((a, b) => b.score - a.score)
+			.slice(0, k);
 	}
 }
