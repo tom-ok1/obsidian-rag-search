@@ -6,6 +6,54 @@ import * as fs from "fs";
 import { storeFilename } from "./vectorStore";
 import { AnySchema, create, save, load, search } from "@orama/orama";
 
+describe("Partition function", () => {
+	it("should consistently map the same ID to the same partition", () => {
+		const numOfShards = 5;
+		const id = "document123";
+
+		const results = Array.from({ length: 10 }, () =>
+			getPartitionIndex(id, numOfShards)
+		);
+
+		const firstResult = results[0];
+		results.forEach((result) => {
+			expect(result).toBe(firstResult);
+		});
+	});
+
+	it("should distribute IDs across available partitions", () => {
+		const numOfShards = 5;
+		const ids = [
+			"document1",
+			"document2",
+			"document3",
+			"document4",
+			"document5",
+			"document6",
+			"document7",
+		];
+
+		const partitions = ids.map((id) => getPartitionIndex(id, numOfShards));
+
+		// There should be at least 2 different partition indices
+		const uniquePartitions = new Set(partitions);
+		expect(uniquePartitions.size).toBeGreaterThan(1);
+
+		// All partitions should be within valid range
+		partitions.forEach((partition) => {
+			expect(partition).toBeGreaterThanOrEqual(0);
+			expect(partition).toBeLessThan(numOfShards);
+		});
+	});
+
+	it("should handle edge cases gracefully", () => {
+		const numOfShards = 3;
+
+		expect(getPartitionIndex("", numOfShards)).toBe(0);
+		expect(getPartitionIndex("any-id", 1)).toBe(0);
+	});
+});
+
 describe("OramaDb", () => {
 	const fileAdapter = new LocalFileAdapter();
 	const testDirPath = path.join(__dirname, "test_db");
@@ -161,56 +209,6 @@ describe("OramaDb", () => {
 
 			expect(loadedDb).toBeDefined();
 			expect((loadedDb as any).shards.length).toBe(numOfShards);
-		});
-	});
-
-	describe("Partition function", () => {
-		it("should consistently map the same ID to the same partition", () => {
-			const numOfShards = 5;
-			const id = "document123";
-
-			const results = Array.from({ length: 10 }, () =>
-				getPartitionIndex(id, numOfShards)
-			);
-
-			const firstResult = results[0];
-			results.forEach((result) => {
-				expect(result).toBe(firstResult);
-			});
-		});
-
-		it("should distribute IDs across available partitions", () => {
-			const numOfShards = 5;
-			const ids = [
-				"document1",
-				"document2",
-				"document3",
-				"document4",
-				"document5",
-				"document6",
-				"document7",
-			];
-
-			const partitions = ids.map((id) =>
-				getPartitionIndex(id, numOfShards)
-			);
-
-			// There should be at least 2 different partition indices
-			const uniquePartitions = new Set(partitions);
-			expect(uniquePartitions.size).toBeGreaterThan(1);
-
-			// All partitions should be within valid range
-			partitions.forEach((partition) => {
-				expect(partition).toBeGreaterThanOrEqual(0);
-				expect(partition).toBeLessThan(numOfShards);
-			});
-		});
-
-		it("should handle edge cases gracefully", () => {
-			const numOfShards = 3;
-
-			expect(getPartitionIndex("", numOfShards)).toBe(0);
-			expect(getPartitionIndex("any-id", 1)).toBe(0);
 		});
 	});
 
