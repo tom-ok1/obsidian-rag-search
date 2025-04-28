@@ -14,19 +14,7 @@ import {
 	Schema,
 } from "@orama/orama";
 import { storeFilename } from "./vectorStore";
-const ConsistentHash = require("consistent-hash");
-
-export function getPartitionIndex(id: string, numOfShards: number): number {
-	if (!id || numOfShards <= 1) {
-		return 0;
-	}
-
-	const hash = Array.from(id).reduce((acc, char) => {
-		return ((acc << 5) - acc + char.charCodeAt(0)) | 0;
-	}, 0);
-
-	return Math.abs(hash) % numOfShards;
-}
+import { HashRing } from "./hashring";
 
 /**
  * OramaDbConfig defines the configuration for a partitioned Orama database
@@ -46,26 +34,28 @@ interface OramaDbConfig<T extends AnySchema> {
 export class OramaDb<T extends AnySchema> {
 	private shards: Orama<T>[] = [];
 	private config: OramaDbConfig<T>;
-	private ring: InstanceType<typeof ConsistentHash>;
+	private readonly defaultId = "default";
 
 	private constructor(
 		private readonly fileAdapter: FileAdapter,
-		config: OramaDbConfig<T>
+		config: OramaDbConfig<T>,
+		private readonly ring: HashRing
 	) {
 		this.config = config;
-		this.ring = new ConsistentHash();
+		this.ring = ring;
 	}
 
 	static async create<T extends AnySchema>(
 		fileAdapter: FileAdapter,
-		config: OramaDbConfig<T>
+		config: OramaDbConfig<T>,
+		ring: HashRing
 	) {
-		const oramaDb = new OramaDb(fileAdapter, config);
+		const oramaDb = new OramaDb(fileAdapter, config, ring);
 
 		for (let i = 0; i < config.numOfShards; i++) {
 			const db = await create({ schema: config.schema });
 			oramaDb.shards.push(db);
-			oramaDb.ring.add(i.toString());
+			oramaDb.ring.addNode(i.toString());
 			await oramaDb.saveShard(db, i + 1);
 		}
 
@@ -90,9 +80,10 @@ export class OramaDb<T extends AnySchema> {
 
 	static async load<T extends AnySchema>(
 		fileAdapter: FileAdapter,
-		config: OramaDbConfig<T>
+		config: OramaDbConfig<T>,
+		ring: HashRing
 	) {
-		const oramaDb = new OramaDb(fileAdapter, config);
+		const oramaDb = new OramaDb(fileAdapter, config, ring);
 
 		for (let i = 1; i <= config.numOfShards; i++) {
 			const filePath = fileAdapter.join(config.dirPath, storeFilename(i));
@@ -131,10 +122,10 @@ export class OramaDb<T extends AnySchema> {
 
 		for (const doc of documents) {
 			if (!doc.id) {
-				docsByPartition["default"].push(doc);
+				docsByPartition[this.defaultId].push(doc);
 				continue;
 			}
-			const shardKey = this.ring.get(String(doc.id));
+			const shardKey = this.ring.getNode(String(doc.id));
 			docsByPartition[shardKey].push(doc);
 		}
 

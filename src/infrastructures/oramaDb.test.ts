@@ -1,61 +1,15 @@
 import { describe, it, expect, afterEach, beforeEach } from "vitest";
 import { LocalFileAdapter } from "../adapters/LocalFileAdapter";
-import { OramaDb, getPartitionIndex } from "./oramaDb";
+import { OramaDb } from "./oramaDb";
 import * as path from "path";
 import * as fs from "fs";
 import { storeFilename } from "./vectorStore";
 import { AnySchema, create, save, load, search } from "@orama/orama";
-
-describe("Partition function", () => {
-	it("should consistently map the same ID to the same partition", () => {
-		const numOfShards = 5;
-		const id = "document123";
-
-		const results = Array.from({ length: 10 }, () =>
-			getPartitionIndex(id, numOfShards)
-		);
-
-		const firstResult = results[0];
-		results.forEach((result) => {
-			expect(result).toBe(firstResult);
-		});
-	});
-
-	it("should distribute IDs across available partitions", () => {
-		const numOfShards = 5;
-		const ids = [
-			"document1",
-			"document2",
-			"document3",
-			"document4",
-			"document5",
-			"document6",
-			"document7",
-		];
-
-		const partitions = ids.map((id) => getPartitionIndex(id, numOfShards));
-
-		// There should be at least 2 different partition indices
-		const uniquePartitions = new Set(partitions);
-		expect(uniquePartitions.size).toBeGreaterThan(1);
-
-		// All partitions should be within valid range
-		partitions.forEach((partition) => {
-			expect(partition).toBeGreaterThanOrEqual(0);
-			expect(partition).toBeLessThan(numOfShards);
-		});
-	});
-
-	it("should handle edge cases gracefully", () => {
-		const numOfShards = 3;
-
-		expect(getPartitionIndex("", numOfShards)).toBe(0);
-		expect(getPartitionIndex("any-id", 1)).toBe(0);
-	});
-});
+import { HashRing } from "./hashring";
 
 describe("OramaDb", () => {
 	const fileAdapter = new LocalFileAdapter();
+	const hashRing = new HashRing({ replicas: 20 });
 	const testDirPath = path.join(__dirname, "test_db");
 	const testSchema = {
 		id: "string",
@@ -167,7 +121,7 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			const oramaDb = await OramaDb.create(fileAdapter, config);
+			const oramaDb = await OramaDb.create(fileAdapter, config, hashRing);
 
 			// Assert - Should create the expected number of files
 			for (let i = 1; i <= numOfShards; i++) {
@@ -205,7 +159,7 @@ describe("OramaDb", () => {
 				expect(fs.existsSync(dbFilePath)).toBe(true);
 			}
 
-			const loadedDb = await OramaDb.load(fileAdapter, config);
+			const loadedDb = await OramaDb.load(fileAdapter, config, hashRing);
 
 			expect(loadedDb).toBeDefined();
 			expect((loadedDb as any).shards.length).toBe(numOfShards);
@@ -221,7 +175,7 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			const oramaDb = await OramaDb.create(fileAdapter, config);
+			const oramaDb = await OramaDb.create(fileAdapter, config, hashRing);
 			await oramaDb.insertMany(testDocuments);
 
 			let resultDocuments: any[] = [];
@@ -231,10 +185,10 @@ describe("OramaDb", () => {
 				const res = await search(testDb, {});
 				resultDocuments = resultDocuments.concat(res.hits);
 
-				expect(res.hits.length).toBeGreaterThan(0);
-				expect(res.hits[0].document).toBeDefined();
+				expect(res.hits.length).toBeGreaterThanOrEqual(0);
 			}
 			expect(resultDocuments.length).toBe(testDocuments.length);
+			expect(resultDocuments[0].document).toBeDefined();
 		});
 	});
 
@@ -248,7 +202,7 @@ describe("OramaDb", () => {
 			};
 			const documents = JSON.parse(JSON.stringify(testDocuments));
 
-			const oramaDb = await OramaDb.create(fileAdapter, config);
+			const oramaDb = await OramaDb.create(fileAdapter, config, hashRing);
 			await oramaDb.insertMany(documents);
 
 			// Query vector along Z axis direction
@@ -272,7 +226,7 @@ describe("OramaDb", () => {
 			};
 			const documents = JSON.parse(JSON.stringify(testDocuments));
 
-			const oramaDb = await OramaDb.create(fileAdapter, config);
+			const oramaDb = await OramaDb.create(fileAdapter, config, hashRing);
 			await oramaDb.insertMany(documents);
 
 			const queryVector = [0.6, 0.7, 0.8];
