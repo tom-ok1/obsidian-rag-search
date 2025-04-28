@@ -3,7 +3,7 @@ import { LocalFileAdapter } from "../adapters/LocalFileAdapter";
 import { OramaDb, getPartitionIndex } from "./oramaDb";
 import * as path from "path";
 import * as fs from "fs";
-import { storeFilename } from "./oramaStore";
+import { storeFilename } from "./vectorStore";
 import { AnySchema, create, save, load, search } from "@orama/orama";
 
 describe("OramaDb", () => {

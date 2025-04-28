@@ -13,7 +13,7 @@ import {
 	Result,
 	Schema,
 } from "@orama/orama";
-import { storeFilename } from "./oramaStore";
+import { storeFilename } from "./vectorStore";
 
 export function getPartitionIndex(id: string, numOfShards: number): number {
 	if (!id || numOfShards <= 1) {

@@ -41,6 +41,9 @@ type DocumentMetadata = {
 	embeddingModel?: string;
 };
 
+/**
+ * @param id - MD5 hash
+ */
 type DocumentSchema = {
 	id?: string;
 	content?: string;
@@ -56,8 +59,11 @@ export class ObsidianDocument extends Document<DocumentMetadata> {
 }
 
 interface OramaStoreConfig {
-	dbPath: string;
+	dirPath: string;
+	numOfShards: number;
 }
+
+export const storeFilename = (id: number) => `vectorstore-${id}.json`;
 
 export class OramaStore extends VectorStore {
 	private readonly dbConfig: OramaStoreConfig;
@@ -82,10 +88,9 @@ export class OramaStore extends VectorStore {
 		dbConfig: OramaStoreConfig
 	): Promise<OramaStore> {
 		const store = new OramaStore(file, embeddings, dbConfig);
-
-		const isExists = await store.file.exists(dbConfig.dbPath);
+		const isExists = await store.file.exists(dbConfig.dirPath);
 		if (isExists) {
-			store.db = await store.loadDb(dbConfig.dbPath);
+			store.db = await store.loadDb();
 		} else {
 			store.db = await store.createNewDb();
 		}
@@ -94,27 +99,27 @@ export class OramaStore extends VectorStore {
 	}
 
 	private async createNewDb() {
-		const sampleText = "Sample text for embedding";
-		const sampleEmbedding = await this.embeddings.embedQuery(sampleText);
-		const vectorLength = sampleEmbedding.length;
-		const schema = this.documentSchema(vectorLength);
-		const db = await create({ schema });
-		const rawdata = await save(db);
-		const jsonData = JSON.stringify(
-			{ ...rawdata, schema: db.schema },
-			null,
-			2
-		);
-		this.file.write(this.dbConfig.dbPath, jsonData);
-		return db;
+		const schema = await this.documentSchema();
+		let db: Orama<DocumentRawSchema>;
+		for (let i = 0; i < this.dbConfig.numOfShards; i++) {
+			db = await create({ schema });
+			const rawdata = await save(db);
+			const jsonData = JSON.stringify({ ...rawdata }, null, 2);
+			this.file.write(
+				storeFilename(i + 1),
+				this.dbConfig.dirPath,
+				jsonData
+			);
+		}
+		return db!;
 	}
 
-	private async loadDb(path: string) {
+	private async loadDb() {
+		const schema = await this.documentSchema();
+		const path = this.dbConfig.dirPath + "/" + storeFilename(1); // TODO: refactor me
 		const rawdata = await this.file.read(path);
 		const parsedData = JSON.parse(rawdata);
-		const db = await create({
-			schema: parsedData.schema as DocumentRawSchema,
-		});
+		const db = await create({ schema });
 		await load(db, parsedData);
 		return db;
 	}
@@ -188,7 +193,11 @@ export class OramaStore extends VectorStore {
 		};
 	}
 
-	private documentSchema(vectorLength: number): DocumentRawSchema {
+	private async documentSchema(): Promise<DocumentRawSchema> {
+		const sampleText = "Sample text for embedding";
+		const { length: vectorLength } = await this.embeddings.embedQuery(
+			sampleText
+		);
 		return {
 			id: "string",
 			title: "string",

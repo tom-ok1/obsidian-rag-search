@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { ObsidianDocument, OramaStore } from "./oramaStore";
+import { ObsidianDocument, OramaStore, storeFilename } from "./vectorStore";
 import { Embeddings } from "@langchain/core/embeddings";
 import * as fs from "fs";
 import * as path from "path";
@@ -43,12 +43,12 @@ async function createMockDb(embeddingDimensions: number) {
 }
 
 describe("OramaStore", () => {
-	const testDbPath = path.join(__dirname, "test-orama-db.json");
 	const localFileAdapter = new LocalFileAdapter();
-
+	const testDbPath = path.join(__dirname, "test-db");
+	const testDbFilePath = (id: number) => testDbPath + "/" + storeFilename(id);
 	afterEach(() => {
 		if (fs.existsSync(testDbPath)) {
-			fs.rmSync(testDbPath);
+			fs.rmSync(testDbPath, { recursive: true });
 		}
 	});
 
@@ -64,14 +64,16 @@ describe("OramaStore", () => {
 				null,
 				2
 			);
-			fs.writeFileSync(testDbPath, jsonData);
-			expect(fs.existsSync(testDbPath)).toBe(true);
+			fs.mkdirSync(testDbPath);
+			fs.writeFileSync(testDbFilePath(1), jsonData);
+			expect(fs.existsSync(testDbFilePath(1))).toBe(true);
 
 			const store = await OramaStore.create(
 				localFileAdapter,
 				mockEmbeddings,
 				{
-					dbPath: testDbPath,
+					dirPath: testDbPath,
+					numOfShards: 1,
 				}
 			);
 
@@ -81,7 +83,7 @@ describe("OramaStore", () => {
 			expect(db.schema).toEqual(mockOramaDb.schema);
 		});
 
-		it("should create a new db with the correct vector length", async () => {
+		it("should create a new db", async () => {
 			const mockEmbeddingDimensions = 256;
 			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
 
@@ -89,19 +91,37 @@ describe("OramaStore", () => {
 				localFileAdapter,
 				mockEmbeddings,
 				{
-					dbPath: testDbPath,
+					dirPath: testDbPath,
+					numOfShards: 1,
 				}
 			);
 
 			expect(store).toBeDefined();
 			expect(fs.existsSync(testDbPath)).toBe(true);
 
-			const dbContent: Orama<any> = JSON.parse(
-				fs.readFileSync(testDbPath, "utf-8")
+			const dbContent = JSON.parse(
+				fs.readFileSync(testDbFilePath(1), "utf-8")
 			);
-			expect(dbContent.schema.embedding).toBe(
-				`vector[${mockEmbeddingDimensions}]`
+
+			expect(dbContent.docs).toBeDefined();
+		});
+
+		it("should create *n* shard files", async () => {
+			const SHARDS = 3;
+			const mockEmbeddingDimensions = 128;
+			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
+			const store = await OramaStore.create(
+				localFileAdapter,
+				mockEmbeddings,
+				{
+					dirPath: testDbPath,
+					numOfShards: SHARDS,
+				}
 			);
+
+			for (let i = 0; i < SHARDS; i++) {
+				expect(fs.existsSync(testDbFilePath(i + 1))).toBe(true);
+			}
 		});
 	});
 
@@ -140,7 +160,8 @@ describe("OramaStore", () => {
 				localFileAdapter,
 				mockEmbeddings,
 				{
-					dbPath: testDbPath,
+					dirPath: testDbPath,
+					numOfShards: 1,
 				}
 			);
 
@@ -173,7 +194,8 @@ describe("OramaStore", () => {
 				localFileAdapter,
 				mockEmbeddings,
 				{
-					dbPath: testDbPath,
+					dirPath: testDbPath,
+					numOfShards: 1,
 				}
 			);
 
@@ -240,7 +262,8 @@ describe("OramaStore", () => {
 				localFileAdapter,
 				mockEmbeddings,
 				{
-					dbPath: testDbPath,
+					dirPath: testDbPath,
+					numOfShards: 1,
 				}
 			);
 
@@ -288,7 +311,8 @@ describe("OramaStore", () => {
 				localFileAdapter,
 				mockEmbeddings,
 				{
-					dbPath: testDbPath,
+					dirPath: testDbPath,
+					numOfShards: 1,
 				}
 			);
 
@@ -363,7 +387,8 @@ describe("OramaStore", () => {
 				localFileAdapter,
 				mockEmbeddings,
 				{
-					dbPath: testDbPath,
+					dirPath: testDbPath,
+					numOfShards: 1,
 				}
 			);
 
@@ -451,7 +476,8 @@ describe("OramaStore", () => {
 				localFileAdapter,
 				mockEmbeddings,
 				{
-					dbPath: testDbPath,
+					dirPath: testDbPath,
+					numOfShards: 1,
 				}
 			);
 
@@ -542,7 +568,8 @@ describe("OramaStore", () => {
 				localFileAdapter,
 				mockEmbeddings,
 				{
-					dbPath: testDbPath,
+					dirPath: testDbPath,
+					numOfShards: 1,
 				}
 			);
 
