@@ -39,23 +39,23 @@ export class OramaDb<T extends AnySchema> {
 	private constructor(
 		private readonly fileAdapter: FileAdapter,
 		config: OramaDbConfig<T>,
-		private readonly ring: HashRing
+		private readonly hashRing: HashRing
 	) {
 		this.config = config;
-		this.ring = ring;
+		this.hashRing = hashRing;
 	}
 
 	static async create<T extends AnySchema>(
 		fileAdapter: FileAdapter,
 		config: OramaDbConfig<T>,
-		ring: HashRing
+		hashRing: HashRing
 	) {
-		const oramaDb = new OramaDb(fileAdapter, config, ring);
+		const oramaDb = new OramaDb(fileAdapter, config, hashRing);
 
 		for (let i = 0; i < config.numOfShards; i++) {
 			const db = await create({ schema: config.schema });
 			oramaDb.shards.push(db);
-			oramaDb.ring.addNode(i.toString());
+			oramaDb.hashRing.addNode(i.toString());
 			await oramaDb.saveShard(db, i + 1);
 		}
 
@@ -81,9 +81,9 @@ export class OramaDb<T extends AnySchema> {
 	static async load<T extends AnySchema>(
 		fileAdapter: FileAdapter,
 		config: OramaDbConfig<T>,
-		ring: HashRing
+		hashRing: HashRing
 	) {
-		const oramaDb = new OramaDb(fileAdapter, config, ring);
+		const oramaDb = new OramaDb(fileAdapter, config, hashRing);
 
 		for (let i = 1; i <= config.numOfShards; i++) {
 			const filePath = fileAdapter.join(config.dirPath, storeFilename(i));
@@ -125,7 +125,7 @@ export class OramaDb<T extends AnySchema> {
 				docsByPartition[this.defaultId].push(doc);
 				continue;
 			}
-			const shardKey = this.ring.getNode(String(doc.id));
+			const shardKey = this.hashRing.getNode(String(doc.id));
 			docsByPartition[shardKey].push(doc);
 		}
 
