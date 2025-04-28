@@ -30,6 +30,7 @@
 		"@langchain/google-vertexai": "^0.2.5",
 		"@orama/orama": "^3.1.6",
 		"@types/crypto-js": "^4.2.2",
+		"consistent-hash": "^1.2.2",
 		"crypto-js": "^4.2.0",
 		"langchain": "^0.3.24"
 	}

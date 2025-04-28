@@ -14,6 +14,7 @@ import {
 	Schema,
 } from "@orama/orama";
 import { storeFilename } from "./vectorStore";
+const ConsistentHash = require("consistent-hash");
 
 export function getPartitionIndex(id: string, numOfShards: number): number {
 	if (!id || numOfShards <= 1) {
@@ -45,12 +46,14 @@ interface OramaDbConfig<T extends AnySchema> {
 export class OramaDb<T extends AnySchema> {
 	private shards: Orama<T>[] = [];
 	private config: OramaDbConfig<T>;
+	private ring: InstanceType<typeof ConsistentHash>;
 
 	private constructor(
 		private readonly fileAdapter: FileAdapter,
 		config: OramaDbConfig<T>
 	) {
 		this.config = config;
+		this.ring = new ConsistentHash();
 	}
 
 	static async create<T extends AnySchema>(
@@ -62,7 +65,7 @@ export class OramaDb<T extends AnySchema> {
 		for (let i = 0; i < config.numOfShards; i++) {
 			const db = await create({ schema: config.schema });
 			oramaDb.shards.push(db);
-
+			oramaDb.ring.add(i.toString());
 			await oramaDb.saveShard(db, i + 1);
 		}
 
@@ -120,26 +123,26 @@ export class OramaDb<T extends AnySchema> {
 			return;
 		}
 
-		const docsByPartition: Record<number, Doc[]> = {};
+		const docsByPartition: Record<string, Doc[]> = {};
 
 		for (let i = 0; i < this.config.numOfShards; i++) {
-			docsByPartition[i] = [];
+			docsByPartition[i.toString()] = [];
 		}
 
-		// Group documents by their partition index
-		documents.reduce((partitions, doc) => {
-			const partitionIdx = doc.id
-				? getPartitionIndex(String(doc.id), this.config.numOfShards)
-				: 0; // Default to partition 0 for documents without IDs
-			partitions[partitionIdx].push(doc);
-			return partitions;
-		}, docsByPartition);
+		for (const doc of documents) {
+			if (!doc.id) {
+				docsByPartition["default"].push(doc);
+				continue;
+			}
+			const shardKey = this.ring.get(String(doc.id));
+			docsByPartition[shardKey].push(doc);
+		}
 
 		const insertPromises = Object.entries(docsByPartition).map(
-			async ([partitionIdx, docs]) => {
+			async ([shardKey, docs]) => {
 				if (docs.length === 0) return;
 
-				const shardIdx = parseInt(partitionIdx);
+				const shardIdx = parseInt(shardKey, 10);
 				const shard = this.shards[shardIdx];
 
 				await insertMultiple(shard, docs);
