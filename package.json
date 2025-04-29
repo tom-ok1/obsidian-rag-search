@@ -7,6 +7,7 @@
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
+		"exec": "node --env-file=.env -r tsconfig-paths/register -r ts-node/register scripts/index.ts",
 		"test": "vitest"
 	},
 	"keywords": [],
@@ -22,16 +23,16 @@
 		"esbuild": "0.17.3",
 		"obsidian": "latest",
 		"ts-node": "^10.9.2",
+		"tsconfig-paths": "^4.2.0",
 		"tslib": "2.4.0",
 		"typescript": "^5.8.3",
 		"vitest": "^3.1.2"
 	},
 	"dependencies": {
 		"@langchain/google-vertexai": "^0.2.5",
+		"@langchain/langgraph": "^0.2.67",
 		"@orama/orama": "^3.1.6",
-		"@types/crypto-js": "^4.2.2",
-		"consistent-hash": "^1.2.2",
-		"crypto-js": "^4.2.0",
-		"langchain": "^0.3.24"
+		"langchain": "^0.3.24",
+		"zod": "^3.24.3"
 	}
 }
