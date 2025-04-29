@@ -12,6 +12,11 @@ import {
 	WhereCondition,
 	Result,
 	Schema,
+	getByID,
+	AnyOrama,
+	insert,
+	remove,
+	Results,
 } from "@orama/orama";
 import { storeFilename } from "./vectorStore";
 import { HashRing } from "./hashring";
@@ -39,13 +44,13 @@ export class OramaDb<T extends AnySchema> {
 	private constructor(
 		private readonly fileAdapter: FileAdapter,
 		config: OramaDbConfig<T>,
-		private readonly hashRing: HashRing
+		private hashRing: HashRing
 	) {
 		this.config = config;
 		this.hashRing = hashRing;
 	}
 
-	static async create<T extends AnySchema>(
+	static create<T extends AnySchema>(
 		fileAdapter: FileAdapter,
 		config: OramaDbConfig<T>,
 		hashRing: HashRing
@@ -53,17 +58,17 @@ export class OramaDb<T extends AnySchema> {
 		const oramaDb = new OramaDb(fileAdapter, config, hashRing);
 
 		for (let i = 0; i < config.numOfShards; i++) {
-			const db = await create({ schema: config.schema });
+			const db = create({ schema: config.schema });
 			oramaDb.shards.push(db);
-			oramaDb.hashRing.addNode(i.toString());
-			await oramaDb.saveShard(db, i + 1);
+			oramaDb.hashRing.addNode(oramaDb.nodeName(i));
+			oramaDb.saveShard(db, i + 1);
 		}
 
 		return oramaDb;
 	}
 
 	private async saveShard(db: Orama<T>, shardIndex: number) {
-		const rawdata = await save(db);
+		const rawdata = save(db);
 
 		const jsonData = JSON.stringify(
 			{ ...rawdata, schema: db.schema },
@@ -98,8 +103,8 @@ export class OramaDb<T extends AnySchema> {
 			const rawdata = await fileAdapter.read(filePath);
 			const parsedData = JSON.parse(rawdata);
 
-			const db = await create({ schema: config.schema });
-			await load(db, parsedData);
+			const db = create({ schema: config.schema });
+			load(db, parsedData);
 
 			oramaDb.shards.push(db);
 		}
@@ -117,7 +122,7 @@ export class OramaDb<T extends AnySchema> {
 		const docsByPartition: Record<string, Doc[]> = {};
 
 		for (let i = 0; i < this.config.numOfShards; i++) {
-			docsByPartition[i.toString()] = [];
+			docsByPartition[this.nodeName(i)] = [];
 		}
 
 		for (const doc of documents) {
@@ -136,7 +141,7 @@ export class OramaDb<T extends AnySchema> {
 				const shardIdx = parseInt(shardKey, 10);
 				const shard = this.shards[shardIdx];
 
-				await insertMultiple(shard, docs);
+				insertMultiple(shard, docs);
 				await this.saveShard(shard, shardIdx + 1);
 			}
 		);
@@ -154,19 +159,78 @@ export class OramaDb<T extends AnySchema> {
 		}
 
 		// Search each shard
-		const searchPromises = this.shards.map(async (shard) => {
-			return await search(shard, {
-				mode: "vector",
-				vector: { value: query, property: "embedding" },
-				limit: k, // Request k results from each shard
-				where: filter,
-			});
-		});
-
-		const searchResults = await Promise.all(searchPromises);
-		return searchResults
-			.flatMap((result) => result.hits)
+		return this.shards
+			.map((shard) => {
+				return search(shard, {
+					mode: "vector",
+					vector: { value: query, property: "embedding" },
+					limit: k, // Request k results from each shard
+					where: filter,
+				});
+			})
+			.flatMap((result: Results<Schema<T>>) => result.hits)
 			.sort((a, b) => b.score - a.score)
 			.slice(0, k);
+	}
+
+	private nodeName(i: number | string): string {
+		return i.toString();
+	}
+
+	private shardPath(idx: number): string {
+		return this.fileAdapter.join(
+			this.config.dirPath,
+			storeFilename(idx + 1)
+		);
+	}
+
+	async rebalance(newNumShards: number, allIds: string[]): Promise<void> {
+		if (newNumShards === this.config.numOfShards) return;
+
+		// create a new hash ring
+		const newRing = new HashRing<string>({
+			replicas: this.hashRing.replicasCount,
+		});
+		for (let i = 0; i < newNumShards; i++) {
+			newRing.addNode(this.nodeName(i));
+		}
+
+		// expand the hash ring if shards are added
+		if (newNumShards > this.shards.length) {
+			for (let i = this.shards.length; i < newNumShards; i++) {
+				const db = create({ schema: this.config.schema });
+				this.shards.push(db);
+			}
+		}
+
+		// relocate documents
+		const moved = this.hashRing.diffMovedIds(newNumShards, allIds);
+		for (const { id, from, to } of moved) {
+			const fromDb = this.shards[parseInt(from, 10)];
+			const toDb = this.shards[parseInt(to, 10)];
+			const doc = getByID(fromDb, id);
+			doc && insert(toDb, doc);
+			remove(fromDb, id);
+		}
+
+		// make shards permanent
+		await Promise.all(
+			this.shards.map((db, idx) => this.saveShard(db, idx + 1))
+		);
+
+		// remove old shards if the number of shards is reduced
+		if (newNumShards < this.config.numOfShards) {
+			for (let i = newNumShards; i < this.config.numOfShards; i++) {
+				const file = this.shardPath(i);
+				if (await this.fileAdapter.exists(file)) {
+					await this.fileAdapter.delete(file);
+				}
+			}
+			this.shards.length = newNumShards;
+		}
+
+		// update the hash ring and config
+		this.config.numOfShards = newNumShards;
+		this.hashRing = newRing;
 	}
 }

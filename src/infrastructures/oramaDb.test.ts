@@ -1,10 +1,10 @@
-import { describe, it, expect, afterEach, beforeEach } from "vitest";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { LocalFileAdapter } from "../adapters/LocalFileAdapter";
 import { OramaDb } from "./oramaDb";
 import * as path from "path";
 import * as fs from "fs";
 import { storeFilename } from "./vectorStore";
-import { AnySchema, create, save, load, search } from "@orama/orama";
+import { AnySchema, create, save, load, search, count } from "@orama/orama";
 import { HashRing } from "./hashring";
 
 describe("OramaDb", () => {
@@ -242,6 +242,134 @@ describe("OramaDb", () => {
 			results.forEach((result) => {
 				expect(["docX2", "docY2", "docZ2"]).toContain(result.id);
 			});
+		});
+	});
+	describe("rebalance method", () => {
+		it("should redistribute documents when increasing shards", async () => {
+			const initialShards = 2;
+			const finalShards = 4;
+			const config = {
+				dirPath: testDirPath,
+				numOfShards: initialShards,
+				schema: testSchema,
+			};
+			const documents = JSON.parse(JSON.stringify(testDocuments));
+			const allIds = documents.map((doc: any) => doc.id);
+			const localHashRing = new HashRing({ replicas: 20 });
+
+			// Create DB with initial shards and insert data
+			const oramaDb = await OramaDb.create(
+				fileAdapter,
+				config,
+				localHashRing
+			);
+			await oramaDb.insertMany(documents);
+			await oramaDb.rebalance(finalShards, allIds);
+
+			expect((oramaDb as any).config.numOfShards).toBe(finalShards);
+			// Check number of shard files
+			const files = fs.readdirSync(testDirPath);
+			expect(files.filter((f) => f.endsWith(".json")).length).toBe(
+				finalShards
+			);
+
+			// Check total document count across new shards
+			let totalCountAfterRebalance = 0;
+			for (let i = 1; i <= finalShards; i++) {
+				const shardDb = await loadTestDb(i);
+				totalCountAfterRebalance += await count(shardDb);
+			}
+			expect(totalCountAfterRebalance).toBe(documents.length);
+
+			// Check search still works and returns correct results
+			const queryVector = [0, 0, 1]; // Search for Z-axis docs
+			const k = 3;
+			const results = await oramaDb.search(queryVector, k);
+			expect(results.length).toBeLessThanOrEqual(k);
+			expect(results[0].id).toBe("docZ");
+			expect(results[1].id).toBe("docZ2");
+			expect(results[0].score).toBeGreaterThan(results[1].score);
+		});
+
+		it("should redistribute documents when decreasing shards", async () => {
+			const initialShards = 5;
+			const finalShards = 2;
+			const config = {
+				dirPath: testDirPath,
+				numOfShards: initialShards,
+				schema: testSchema,
+			};
+			const documents = JSON.parse(JSON.stringify(testDocuments));
+			const allIds = documents.map((doc: any) => doc.id);
+			const localHashRing = new HashRing({ replicas: 20 });
+
+			// Create DB with initial shards and insert data
+			const oramaDb = await OramaDb.create(
+				fileAdapter,
+				config,
+				localHashRing
+			);
+			await oramaDb.insertMany(documents);
+			await oramaDb.rebalance(finalShards, allIds);
+
+			expect((oramaDb as any).config.numOfShards).toBe(finalShards);
+			// Check number of shard files (should delete old ones)
+			const files = fs.readdirSync(testDirPath);
+			expect(files.filter((f) => f.endsWith(".json")).length).toBe(
+				finalShards
+			);
+
+			// Check total document count across new shards
+			let totalCountAfterRebalance = 0;
+			for (let i = 1; i <= finalShards; i++) {
+				const shardDb = await loadTestDb(i);
+				totalCountAfterRebalance += await count(shardDb);
+			}
+			expect(totalCountAfterRebalance).toBe(documents.length);
+
+			// Check search still works
+			const queryVector = [1, 0, 0]; // Search for X-axis docs
+			const k = 3;
+			const results = await oramaDb.search(queryVector, k);
+			expect(results.length).toBeLessThanOrEqual(k);
+			expect(results[0].id).toBe("docX");
+			expect(results[2].id).toBe("docX2");
+			expect(results[0].score).toBeGreaterThan(results[2].score);
+		});
+
+		it("should handle rebalancing to the same number of shards (no-op)", async () => {
+			const initialShards = 3;
+			const config = {
+				dirPath: testDirPath,
+				numOfShards: initialShards,
+				schema: testSchema,
+			};
+			const documents = JSON.parse(JSON.stringify(testDocuments));
+			const allIds = documents.map((doc: any) => doc.id);
+			const localHashRing = new HashRing({ replicas: 20 });
+
+			const oramaDb = await OramaDb.create(
+				fileAdapter,
+				config,
+				localHashRing
+			);
+			await oramaDb.insertMany(documents);
+
+			// Spy on saveShard to ensure it's not called unnecessarily
+			const saveShardSpy = vi.spyOn(oramaDb as any, "saveShard");
+
+			await oramaDb.rebalance(initialShards, allIds);
+
+			expect((oramaDb as any).config.numOfShards).toBe(initialShards);
+			expect(saveShardSpy).not.toHaveBeenCalled(); // Should not save if no changes
+
+			// Verify data integrity
+			let totalCount = 0;
+			for (let i = 1; i <= initialShards; i++) {
+				const shardDb = await loadTestDb(i);
+				totalCount += await count(shardDb);
+			}
+			expect(totalCount).toBe(documents.length);
 		});
 	});
 });
