@@ -1,4 +1,4 @@
-import { FileAdapter } from "../adapters/fileAdapter";
+import { FileAdapter } from "../services/fileAdapter";
 import {
 	create,
 	load,
@@ -169,6 +169,7 @@ export class OramaDb<T extends AnySchema> {
 					vector: { value: query, property: "embedding" },
 					limit: k, // Request k results from each shard
 					where: filter,
+					similarity: 0.3,
 				});
 			})
 			.flatMap((result: Results<Schema<T>>) => result.hits)

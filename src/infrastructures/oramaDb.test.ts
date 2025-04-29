@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { LocalFileAdapter } from "../adapters/LocalFileAdapter";
+import { LocalFileAdapter } from "./LocalFileAdapter";
 import { OramaDb, storeFilename } from "./oramaDb";
 import * as path from "path";
 import * as fs from "fs";

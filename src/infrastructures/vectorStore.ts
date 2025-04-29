@@ -6,7 +6,7 @@ import {
 } from "@langchain/core/documents";
 import { EmbeddingsInterface } from "@langchain/core/embeddings";
 import { WhereCondition } from "@orama/orama";
-import { FileAdapter } from "../adapters/fileAdapter";
+import { FileAdapter } from "../services/fileAdapter";
 import { OramaDb } from "./oramaDb";
 import { HashRing } from "./hashring";
 
@@ -142,7 +142,16 @@ export class OramaStore extends VectorStore {
 			{
 				id: document.id,
 				pageContent: document.content,
-				metadata: document.metadata,
+				metadata: {
+					title: document.title,
+					path: document.path,
+					extension: document.extension,
+					tags: document.tags,
+					created_at: document.created_at,
+					ctime: document.ctime,
+					mtime: document.mtime,
+					embeddingModel: document.embeddingModel,
+				},
 			},
 			score,
 		]);
