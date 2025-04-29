@@ -23,18 +23,12 @@ export class MarkdownProcessor {
 
 	async readMarkdownFile(filePath: string): Promise<string> {
 		const extension = await this.file.extname(filePath);
-		if (extension !== ".md") {
+		if (extension !== "md") {
 			throw new Error("Not a markdown file");
 		}
 		return await this.file.read(filePath);
 	}
 
-	/**
-	 * Split content into chunks
-	 * @param content File content
-	 * @param fileInfo File information
-	 * @returns Array of chunks
-	 */
 	async splitIntoChunks(
 		content: string,
 		fileInfo: FileInfo
@@ -65,11 +59,6 @@ export class MarkdownProcessor {
 			.filter((chunk) => chunk.content.trim());
 	}
 
-	/**
-	 * Extract tags from markdown content
-	 * @param content File content
-	 * @returns Array of tags
-	 */
 	private extractTags(content: string): string[] {
 		const tagRegex = /#([a-zA-Z0-9_-]+)/g;
 		const tags: string[] = [];
@@ -82,11 +71,6 @@ export class MarkdownProcessor {
 		return [...new Set(tags)]; // Remove duplicates
 	}
 
-	/**
-	 * Extract frontmatter from markdown content
-	 * @param content File content
-	 * @returns Frontmatter object
-	 */
 	private extractFrontmatter(content: string): Record<string, any> {
 		const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/;
 		const match = content.match(frontmatterRegex);
@@ -114,13 +98,6 @@ export class MarkdownProcessor {
 		return frontmatter;
 	}
 
-	/**
-	 * Get file information
-	 * @param filePath Path to the file
-	 * @param stats File stats
-	 * @param content File content
-	 * @returns File information
-	 */
 	async getFileInfo(filePath: string, content: string): Promise<FileInfo> {
 		const basename = await this.file.basename(filePath);
 		const extension = await this.file.extname(filePath);
