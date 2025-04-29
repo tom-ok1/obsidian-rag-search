@@ -13,7 +13,6 @@ import {
 	Result,
 	Schema,
 	getByID,
-	AnyOrama,
 	insert,
 	remove,
 	Results,
@@ -50,23 +49,6 @@ export class OramaDb<T extends AnySchema> {
 		this.hashRing = hashRing;
 	}
 
-	static create<T extends AnySchema>(
-		fileAdapter: FileAdapter,
-		config: OramaDbConfig<T>,
-		hashRing: HashRing
-	) {
-		const oramaDb = new OramaDb(fileAdapter, config, hashRing);
-
-		for (let i = 0; i < config.numOfShards; i++) {
-			const db = create({ schema: config.schema });
-			oramaDb.shards.push(db);
-			oramaDb.hashRing.addNode(oramaDb.nodeName(i));
-			oramaDb.saveShard(db, i + 1);
-		}
-
-		return oramaDb;
-	}
-
 	private async saveShard(db: Orama<T>, shardIndex: number) {
 		const rawdata = save(db);
 
@@ -77,10 +59,27 @@ export class OramaDb<T extends AnySchema> {
 		);
 
 		await this.fileAdapter.write(
-			storeFilename(shardIndex),
+			storeFilename(shardIndex + 1),
 			this.config.dirPath,
 			jsonData
 		);
+	}
+
+	static async create<T extends AnySchema>(
+		fileAdapter: FileAdapter,
+		config: OramaDbConfig<T>,
+		hashRing: HashRing
+	) {
+		const oramaDb = new OramaDb(fileAdapter, config, hashRing);
+
+		for (let i = 0; i < config.numOfShards; i++) {
+			const db = create({ schema: config.schema });
+			oramaDb.shards.push(db);
+			oramaDb.hashRing.addNode(oramaDb.nodeName(i));
+			await oramaDb.saveShard(db, i);
+		}
+
+		return oramaDb;
 	}
 
 	static async load<T extends AnySchema>(
@@ -90,13 +89,12 @@ export class OramaDb<T extends AnySchema> {
 	) {
 		const oramaDb = new OramaDb(fileAdapter, config, hashRing);
 
-		for (let i = 1; i <= config.numOfShards; i++) {
-			const filePath = fileAdapter.join(config.dirPath, storeFilename(i));
-
+		for (let i = 0; i < config.numOfShards; i++) {
+			const filePath = oramaDb.shardPath(i);
 			// Skip missing shards
 			const fileExists = await fileAdapter.exists(filePath);
 			if (!fileExists) {
-				console.warn(`Shard ${i} not found at ${filePath}`);
+				console.warn(`Shard ${i + 1} not found at ${filePath}`);
 				continue;
 			}
 
@@ -119,8 +117,9 @@ export class OramaDb<T extends AnySchema> {
 			return;
 		}
 
-		const docsByPartition: Record<string, Doc[]> = {};
-
+		const docsByPartition: Record<string, Doc[]> = {
+			[this.defaultId]: [],
+		};
 		for (let i = 0; i < this.config.numOfShards; i++) {
 			docsByPartition[this.nodeName(i)] = [];
 		}
@@ -142,7 +141,7 @@ export class OramaDb<T extends AnySchema> {
 				const shard = this.shards[shardIdx];
 
 				insertMultiple(shard, docs);
-				await this.saveShard(shard, shardIdx + 1);
+				await this.saveShard(shard, shardIdx);
 			}
 		);
 
@@ -171,17 +170,6 @@ export class OramaDb<T extends AnySchema> {
 			.flatMap((result: Results<Schema<T>>) => result.hits)
 			.sort((a, b) => b.score - a.score)
 			.slice(0, k);
-	}
-
-	private nodeName(i: number | string): string {
-		return i.toString();
-	}
-
-	private shardPath(idx: number): string {
-		return this.fileAdapter.join(
-			this.config.dirPath,
-			storeFilename(idx + 1)
-		);
 	}
 
 	async rebalance(newNumShards: number, allIds: string[]): Promise<void> {
@@ -215,7 +203,7 @@ export class OramaDb<T extends AnySchema> {
 
 		// make shards permanent
 		await Promise.all(
-			this.shards.map((db, idx) => this.saveShard(db, idx + 1))
+			this.shards.map((db, idx) => this.saveShard(db, idx))
 		);
 
 		// remove old shards if the number of shards is reduced
@@ -232,5 +220,16 @@ export class OramaDb<T extends AnySchema> {
 		// update the hash ring and config
 		this.config.numOfShards = newNumShards;
 		this.hashRing = newRing;
+	}
+
+	private nodeName(i: number | string): string {
+		return i.toString();
+	}
+
+	private shardPath(idx: number): string {
+		return this.fileAdapter.join(
+			this.config.dirPath,
+			storeFilename(idx + 1)
+		);
 	}
 }
