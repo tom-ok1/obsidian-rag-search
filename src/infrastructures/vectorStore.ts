@@ -9,31 +9,9 @@ import { WhereCondition } from "@orama/orama";
 import { FileAdapter } from "../services/fileAdapter";
 import { OramaDb } from "./oramaDb";
 import { HashRing } from "./hashring";
+import { MdDocMetadata } from "src/services/markdownProcessor";
 
-type MdDocRawSchema = {
-	id: "string";
-	title: "string";
-	path: "string";
-	content: "string";
-	embedding: `vector[${number}]`;
-	embeddingModel: "string";
-	created_at: "number";
-	ctime: "number";
-	mtime: "number";
-	tags: "string[]";
-	extension: "string";
-};
-
-type MdDocMetadata = {
-	title?: string;
-	path?: string;
-	extension?: string;
-	tags?: string[];
-	created_at?: number;
-	ctime?: number;
-	mtime?: number;
-	embeddingModel?: string;
-};
+type MdDocRawSchema = Awaited<ReturnType<OramaStore["documentSchema"]>>;
 
 /**
  * @param id - MD5 hash
@@ -55,10 +33,12 @@ export class MarkDownDoc extends Document<MdDocMetadata> {
 interface OramaStoreConfig {
 	dirPath: string;
 	numOfShards: number;
+	model?: string;
 }
 
 export class OramaStore extends VectorStore {
 	private db: OramaDb<MdDocRawSchema>;
+	private readonly dbConfig: OramaStoreConfig;
 
 	private constructor(
 		private readonly file: FileAdapter,
@@ -66,6 +46,7 @@ export class OramaStore extends VectorStore {
 		dbConfig: OramaStoreConfig
 	) {
 		super(embeddings, dbConfig);
+		this.dbConfig = dbConfig;
 	}
 
 	_vectorstoreType(): string {
@@ -76,7 +57,7 @@ export class OramaStore extends VectorStore {
 		file: FileAdapter,
 		embeddings: EmbeddingsInterface,
 		dbConfig: OramaStoreConfig
-	): Promise<OramaStore> {
+	) {
 		const store = new OramaStore(file, embeddings, dbConfig);
 		const schema = await store.documentSchema();
 		const isExists = await store.file.exists(dbConfig.dirPath);
@@ -147,20 +128,16 @@ export class OramaStore extends VectorStore {
 					path: document.path,
 					extension: document.extension,
 					tags: document.tags,
-					created_at: document.created_at,
 					ctime: document.ctime,
 					mtime: document.mtime,
-					embeddingModel: document.embeddingModel,
+					embeddingModel: this.dbConfig.model,
 				},
 			},
 			score,
 		]);
 	}
 
-	private mapDocumentToSchema(
-		doc: MdDocInterface,
-		embedding: number[]
-	): MdDocSchema {
+	private mapDocumentToSchema(doc: MdDocInterface, embedding: number[]) {
 		return {
 			id: doc.id,
 			content: doc.pageContent,
@@ -169,14 +146,13 @@ export class OramaStore extends VectorStore {
 			path: doc.metadata.path,
 			extension: doc.metadata.extension,
 			tags: doc.metadata.tags,
-			created_at: doc.metadata.created_at,
 			ctime: doc.metadata.ctime,
 			mtime: doc.metadata.mtime,
-			embeddingModel: doc.metadata.embeddingModel,
+			embeddingModel: this.dbConfig.model,
 		};
 	}
 
-	private async documentSchema(): Promise<MdDocRawSchema> {
+	private async documentSchema() {
 		const sampleText = "Sample text for embedding";
 		const { length: vectorLength } = await this.embeddings.embedQuery(
 			sampleText
@@ -188,11 +164,10 @@ export class OramaStore extends VectorStore {
 			content: "string",
 			embedding: `vector[${vectorLength}]`,
 			embeddingModel: "string",
-			created_at: "number",
 			ctime: "number",
 			mtime: "number",
 			tags: "string[]",
 			extension: "string",
-		};
+		} as const;
 	}
 }

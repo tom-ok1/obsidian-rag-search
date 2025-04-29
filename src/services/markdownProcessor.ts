@@ -4,24 +4,19 @@ import { FileAdapter } from "./fileAdapter";
 
 const CHUNK_SIZE = 1000;
 
-interface FileInfo {
-	title: string;
-	path: string;
-	ctime: number;
-	mtime: number;
-	tags: string[];
-	extension: string;
-	metadata: {
-		created: string;
-		modified: string;
-		[key: string]: any;
-	};
-}
+export type MdDocMetadata = {
+	title?: string;
+	path?: string;
+	extension?: string;
+	tags?: string[];
+	ctime?: number;
+	mtime?: number;
+};
 
 export class MarkdownProcessor {
 	constructor(private readonly file: FileAdapter) {}
 
-	async readMarkdownFile(filePath: string): Promise<string> {
+	async readMarkdownFile(filePath: string) {
 		const extension = await this.file.extname(filePath);
 		if (extension !== "md") {
 			throw new Error("Not a markdown file");
@@ -29,10 +24,7 @@ export class MarkdownProcessor {
 		return await this.file.read(filePath);
 	}
 
-	async splitIntoChunks(
-		content: string,
-		fileInfo: FileInfo
-	): Promise<Array<{ content: string; fileInfo: FileInfo }>> {
+	async splitIntoChunks(content: string, documentMetadata: MdDocMetadata) {
 		const textSplitter = RecursiveCharacterTextSplitter.fromLanguage(
 			"markdown",
 			{
@@ -43,9 +35,9 @@ export class MarkdownProcessor {
 		// Add chunk header
 		const chunks = await textSplitter.createDocuments([content], [], {
 			chunkHeader: `\n\nNOTE TITLE: [[${
-				fileInfo.title
+				documentMetadata.title
 			}]]\n\nMETADATA:${JSON.stringify(
-				fileInfo.metadata
+				documentMetadata
 			)}\n\nNOTE BLOCK CONTENT:\n\n`,
 			appendChunkOverlapHeader: true,
 		});
@@ -54,12 +46,12 @@ export class MarkdownProcessor {
 		return chunks
 			.map((chunk) => ({
 				content: chunk.pageContent,
-				fileInfo: fileInfo,
+				documentMetadata,
 			}))
 			.filter((chunk) => chunk.content.trim());
 	}
 
-	private extractTags(content: string): string[] {
+	private extractTags(content: string) {
 		const tagRegex = /#([a-zA-Z0-9_-]+)/g;
 		const tags: string[] = [];
 		let match: RegExpExecArray | null;
@@ -71,39 +63,11 @@ export class MarkdownProcessor {
 		return [...new Set(tags)]; // Remove duplicates
 	}
 
-	private extractFrontmatter(content: string): Record<string, any> {
-		const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/;
-		const match = content.match(frontmatterRegex);
-
-		if (!match) return {};
-
-		const frontmatterText = match[1];
-		const frontmatter: Record<string, any> = {};
-
-		frontmatterText.split("\n").forEach((line) => {
-			const colonIndex = line.indexOf(":");
-			if (colonIndex !== -1) {
-				const key = line.slice(0, colonIndex).trim();
-				const value = line.slice(colonIndex + 1).trim();
-
-				// Try to parse as JSON if possible, otherwise keep as string
-				try {
-					frontmatter[key] = JSON.parse(value);
-				} catch {
-					frontmatter[key] = value;
-				}
-			}
-		});
-
-		return frontmatter;
-	}
-
-	async getFileInfo(filePath: string, content: string): Promise<FileInfo> {
+	async getFileInfo(filePath: string, content: string) {
 		const basename = await this.file.basename(filePath);
 		const extension = await this.file.extname(filePath);
 		const stats = await this.file.stat(filePath);
 		const tags = this.extractTags(content);
-		const frontmatter = this.extractFrontmatter(content);
 
 		return {
 			title: basename,
@@ -112,21 +76,14 @@ export class MarkdownProcessor {
 			mtime: stats.mtime,
 			tags: tags,
 			extension: extension,
-			metadata: {
-				...frontmatter,
-				created: new Date(stats.ctime).toISOString(),
-				modified: new Date(stats.mtime).toISOString(),
-			},
 		};
 	}
 
-	getDocHash(content: string): string {
+	getDocHash(content: string) {
 		return MD5(content).toString();
 	}
 
-	async processMarkdownFile(
-		filePath: string
-	): Promise<Array<{ id: string; content: string; fileInfo: FileInfo }>> {
+	async processMarkdownFile(filePath: string) {
 		try {
 			const content = await this.readMarkdownFile(filePath);
 			if (!content?.trim()) return [];
@@ -138,7 +95,7 @@ export class MarkdownProcessor {
 			return chunks.map((chunk) => ({
 				id: this.getDocHash(chunk.content),
 				content: chunk.content,
-				fileInfo: chunk.fileInfo,
+				documentMetadata: chunk.documentMetadata,
 			}));
 		} catch (error) {
 			console.error(`Error processing file ${filePath}:`, error);
@@ -146,9 +103,7 @@ export class MarkdownProcessor {
 		}
 	}
 
-	async processMarkdownFiles(
-		filePaths: string[]
-	): Promise<Array<{ id: string; content: string; fileInfo: FileInfo }>> {
+	async processMarkdownFiles(filePaths: string[]) {
 		const results = [];
 		for (const filePath of filePaths) {
 			const chunks = await this.processMarkdownFile(filePath);

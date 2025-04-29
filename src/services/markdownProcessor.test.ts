@@ -24,8 +24,8 @@ describe("MarkdownProcessor", () => {
 
 		expect(chunks.length).toBeGreaterThan(1);
 		expect(chunks[0].content).toContain("NOTE TITLE: [[sample.md]]");
-		expect(chunks[0].fileInfo.tags).toContain("#tag1");
-		expect(chunks[0].fileInfo.extension).toBe("md");
+		expect(chunks[0].documentMetadata.tags).toContain("#tag1");
+		expect(chunks[0].documentMetadata.extension).toBe("md");
 	});
 
 	it("processMarkdownFile assigns deterministic MD5 ids", async () => {
