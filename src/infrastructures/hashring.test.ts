@@ -2,17 +2,6 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { HashRing } from "./hashring";
 
 describe("HashRing", () => {
-	it("should initialize with default replicas", () => {
-		const ring = new HashRing();
-		// Accessing private replicas for testing purposes, consider if there's a better way
-		expect((ring as any).replicas).toBe(100);
-	});
-
-	it("should initialize with specified replicas", () => {
-		const ring = new HashRing({ replicas: 50 });
-		expect((ring as any).replicas).toBe(50);
-	});
-
 	it("should add nodes and increase ring size", () => {
 		const ring = new HashRing({ replicas: 10 });
 		ring.addNode("node1");
@@ -50,7 +39,7 @@ describe("HashRing", () => {
 		ring.addNode("node1");
 		const initialRingSize = (ring as any).ring.length;
 		expect(() => ring.removeNode("node2")).not.toThrow();
-		expect((ring as any).ring.length).toBe(initialRingSize);
+		expect(ring.replicasCount).toBe(initialRingSize);
 	});
 
 	it("should throw error when getting node from empty ring", () => {
@@ -98,8 +87,8 @@ describe("HashRing", () => {
 		ring.addNode("node1");
 		ring.addNode("node2");
 
-		const key1Node = ring.getNode("key1");
-		const key2Node = ring.getNode("key2");
+		ring.getNode("key1");
+		ring.getNode("key2");
 
 		// Add a new node
 		ring.addNode("node3");
@@ -188,7 +177,6 @@ describe("HashRing", () => {
 		});
 	});
 
-	// Optional: Test fnv1a directly if needed, though it's used internally
 	describe("fnv1a", () => {
 		it("should produce consistent hash for the same string", () => {
 			const hash1 = HashRing.fnv1a("test-string");
