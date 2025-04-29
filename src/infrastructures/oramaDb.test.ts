@@ -1,9 +1,8 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { LocalFileAdapter } from "../adapters/LocalFileAdapter";
-import { OramaDb } from "./oramaDb";
+import { OramaDb, storeFilename } from "./oramaDb";
 import * as path from "path";
 import * as fs from "fs";
-import { storeFilename } from "./vectorStore";
 import { AnySchema, create, save, load, search, count } from "@orama/orama";
 import { HashRing } from "./hashring";
 
@@ -163,6 +162,35 @@ describe("OramaDb", () => {
 
 			expect(loadedDb).toBeDefined();
 			expect((loadedDb as any).shards.length).toBe(numOfShards);
+		});
+
+		it("should be able to search after loading", async () => {
+			const numOfShards = 3;
+			const config = {
+				dirPath: testDirPath,
+				numOfShards,
+				schema: testSchema,
+			};
+
+			for (let i = 1; i <= numOfShards; i++) {
+				const db = await createTestDb();
+
+				const rawdata = await save(db);
+				const jsonData = JSON.stringify(rawdata, null, 2);
+
+				const dbFilePath = path.join(testDirPath, storeFilename(i));
+				fs.writeFileSync(dbFilePath, jsonData, "utf-8");
+
+				expect(fs.existsSync(dbFilePath)).toBe(true);
+			}
+
+			const loadedDb = await OramaDb.load(fileAdapter, config, hashRing);
+
+			const queryVector = [0.5, 0.5, 0.5];
+			const k = 3;
+			const results = await loadedDb.search(queryVector, k);
+
+			expect(results.length).toBeLessThanOrEqual(k);
 		});
 	});
 

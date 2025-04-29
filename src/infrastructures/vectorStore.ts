@@ -5,18 +5,12 @@ import {
 	DocumentInterface,
 } from "@langchain/core/documents";
 import { EmbeddingsInterface } from "@langchain/core/embeddings";
-import {
-	create,
-	insertMultiple,
-	load,
-	Orama,
-	save,
-	search,
-	WhereCondition,
-} from "@orama/orama";
+import { WhereCondition } from "@orama/orama";
 import { FileAdapter } from "../adapters/fileAdapter";
+import { OramaDb } from "./oramaDb";
+import { HashRing } from "./hashring";
 
-type DocumentRawSchema = {
+type MdDocRawSchema = {
 	id: "string";
 	title: "string";
 	path: "string";
@@ -30,7 +24,7 @@ type DocumentRawSchema = {
 	extension: "string";
 };
 
-type DocumentMetadata = {
+type MdDocMetadata = {
 	title?: string;
 	path?: string;
 	extension?: string;
@@ -44,16 +38,16 @@ type DocumentMetadata = {
 /**
  * @param id - MD5 hash
  */
-type DocumentSchema = {
+type MdDocSchema = {
 	id?: string;
 	content?: string;
 	embedding?: number[];
-} & DocumentMetadata;
+} & MdDocMetadata;
 
-type ObsidianDocumentInterface = DocumentInterface<DocumentMetadata>;
+type MdDocInterface = DocumentInterface<MdDocMetadata>;
 
-export class ObsidianDocument extends Document<DocumentMetadata> {
-	constructor(fields: DocumentInput<DocumentMetadata>) {
+export class MarkDownDoc extends Document<MdDocMetadata> {
+	constructor(fields: DocumentInput<MdDocMetadata>) {
 		super(fields);
 	}
 }
@@ -63,11 +57,8 @@ interface OramaStoreConfig {
 	numOfShards: number;
 }
 
-export const storeFilename = (id: number) => `vectorstore-${id}.json`;
-
 export class OramaStore extends VectorStore {
-	private readonly dbConfig: OramaStoreConfig;
-	private db: Orama<DocumentRawSchema>;
+	private db: OramaDb<MdDocRawSchema>;
 
 	private constructor(
 		private readonly file: FileAdapter,
@@ -75,7 +66,6 @@ export class OramaStore extends VectorStore {
 		dbConfig: OramaStoreConfig
 	) {
 		super(embeddings, dbConfig);
-		this.dbConfig = dbConfig;
 	}
 
 	_vectorstoreType(): string {
@@ -88,45 +78,36 @@ export class OramaStore extends VectorStore {
 		dbConfig: OramaStoreConfig
 	): Promise<OramaStore> {
 		const store = new OramaStore(file, embeddings, dbConfig);
+		const schema = await store.documentSchema();
 		const isExists = await store.file.exists(dbConfig.dirPath);
 		if (isExists) {
-			store.db = await store.loadDb();
+			store.db = await OramaDb.load(
+				file,
+				{
+					dirPath: dbConfig.dirPath,
+					numOfShards: dbConfig.numOfShards,
+					schema,
+				},
+				new HashRing()
+			);
 		} else {
-			store.db = await store.createNewDb();
+			store.db = await OramaDb.create(
+				file,
+				{
+					dirPath: dbConfig.dirPath,
+					numOfShards: dbConfig.numOfShards,
+					schema,
+				},
+				new HashRing()
+			);
 		}
 
 		return store;
 	}
 
-	private async createNewDb() {
-		const schema = await this.documentSchema();
-		let db: Orama<DocumentRawSchema>;
-		for (let i = 0; i < this.dbConfig.numOfShards; i++) {
-			db = await create({ schema });
-			const rawdata = await save(db);
-			const jsonData = JSON.stringify({ ...rawdata }, null, 2);
-			this.file.write(
-				storeFilename(i + 1),
-				this.dbConfig.dirPath,
-				jsonData
-			);
-		}
-		return db!;
-	}
-
-	private async loadDb() {
-		const schema = await this.documentSchema();
-		const path = this.dbConfig.dirPath + "/" + storeFilename(1); // TODO: refactor me
-		const rawdata = await this.file.read(path);
-		const parsedData = JSON.parse(rawdata);
-		const db = await create({ schema });
-		await load(db, parsedData);
-		return db;
-	}
-
 	async addVectors(
 		vectors: number[][],
-		documents: ObsidianDocumentInterface[]
+		documents: MdDocInterface[]
 	): Promise<string[] | void> {
 		if (vectors.length !== documents.length) {
 			throw new Error(
@@ -136,35 +117,28 @@ export class OramaStore extends VectorStore {
 		const documentsWithEmbeddings = documents.map((doc, index) =>
 			this.mapDocumentToSchema(doc, vectors[index])
 		);
-		await insertMultiple(this.db, documentsWithEmbeddings);
+		await this.db.insertMany(documentsWithEmbeddings);
 		return documents.map(({ id }) => id).filter((id) => id !== undefined);
 	}
 
-	async addDocuments(
-		documents: ObsidianDocumentInterface[]
-	): Promise<string[] | void> {
+	async addDocuments(documents: MdDocInterface[]): Promise<string[] | void> {
 		const vectorizedDocuments = await this.embeddings.embedDocuments(
 			documents.map((doc) => doc.pageContent)
 		);
 		const documentsWithEmbeddings = documents.map((doc, index) =>
 			this.mapDocumentToSchema(doc, vectorizedDocuments[index])
 		);
-		await insertMultiple(this.db, documentsWithEmbeddings);
+		await this.db.insertMany(documentsWithEmbeddings);
 		return documents.map(({ id }) => id).filter((id) => id !== undefined);
 	}
 
 	async similaritySearchVectorWithScore(
 		query: number[],
 		k: number,
-		filter?: Partial<WhereCondition<DocumentRawSchema>>
-	): Promise<[ObsidianDocumentInterface, number][]> {
-		const results = await search(this.db, {
-			mode: "vector",
-			vector: { value: query, property: "embedding" },
-			limit: k,
-			where: filter,
-		});
-		return results.hits.map(({ document, score }) => [
+		filter?: Partial<WhereCondition<MdDocRawSchema>>
+	): Promise<[MdDocInterface, number][]> {
+		const results = this.db.search(query, k, filter);
+		return results.map(({ document, score }) => [
 			{
 				id: document.id,
 				pageContent: document.content,
@@ -175,9 +149,9 @@ export class OramaStore extends VectorStore {
 	}
 
 	private mapDocumentToSchema(
-		doc: ObsidianDocumentInterface,
+		doc: MdDocInterface,
 		embedding: number[]
-	): DocumentSchema {
+	): MdDocSchema {
 		return {
 			id: doc.id,
 			content: doc.pageContent,
@@ -193,7 +167,7 @@ export class OramaStore extends VectorStore {
 		};
 	}
 
-	private async documentSchema(): Promise<DocumentRawSchema> {
+	private async documentSchema(): Promise<MdDocRawSchema> {
 		const sampleText = "Sample text for embedding";
 		const { length: vectorLength } = await this.embeddings.embedQuery(
 			sampleText

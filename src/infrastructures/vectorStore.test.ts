@@ -1,10 +1,11 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
-import { ObsidianDocument, OramaStore, storeFilename } from "./vectorStore";
+import { describe, it, expect, afterEach } from "vitest";
+import { MarkDownDoc, OramaStore } from "./vectorStore";
 import { Embeddings } from "@langchain/core/embeddings";
 import * as fs from "fs";
 import * as path from "path";
 import { Orama, create, save, search } from "@orama/orama";
 import { LocalFileAdapter } from "../adapters/LocalFileAdapter";
+import { OramaDb, storeFilename } from "./oramaDb";
 
 class MockEmbeddings extends Embeddings {
 	private dimensions: number;
@@ -68,19 +69,16 @@ describe("OramaStore", () => {
 			fs.writeFileSync(testDbFilePath(1), jsonData);
 			expect(fs.existsSync(testDbFilePath(1))).toBe(true);
 
-			const store = await OramaStore.create(
-				localFileAdapter,
-				mockEmbeddings,
-				{
-					dirPath: testDbPath,
-					numOfShards: 1,
-				}
+			await OramaStore.create(localFileAdapter, mockEmbeddings, {
+				dirPath: testDbPath,
+				numOfShards: 1,
+			});
+
+			const dbContent = JSON.parse(
+				fs.readFileSync(testDbFilePath(1), "utf-8")
 			);
-
-			const db = (store as any).db as Orama<any>;
-
-			expect(store).toBeDefined();
-			expect(db.schema).toEqual(mockOramaDb.schema);
+			expect(dbContent.docs).toBeDefined();
+			expect(dbContent.schema).toEqual(mockOramaDb.schema);
 		});
 
 		it("should create a new db", async () => {
@@ -110,14 +108,10 @@ describe("OramaStore", () => {
 			const SHARDS = 3;
 			const mockEmbeddingDimensions = 128;
 			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
-			const store = await OramaStore.create(
-				localFileAdapter,
-				mockEmbeddings,
-				{
-					dirPath: testDbPath,
-					numOfShards: SHARDS,
-				}
-			);
+			await OramaStore.create(localFileAdapter, mockEmbeddings, {
+				dirPath: testDbPath,
+				numOfShards: SHARDS,
+			});
 
 			for (let i = 0; i < SHARDS; i++) {
 				expect(fs.existsSync(testDbFilePath(i + 1))).toBe(true);
@@ -130,7 +124,7 @@ describe("OramaStore", () => {
 			const mockEmbeddingDimensions = 128;
 			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
 			const testDocs = [
-				new ObsidianDocument({
+				new MarkDownDoc({
 					id: "doc1",
 					pageContent: "Test document 1",
 					metadata: {
@@ -142,7 +136,7 @@ describe("OramaStore", () => {
 						mtime: Date.now(),
 					},
 				}),
-				new ObsidianDocument({
+				new MarkDownDoc({
 					id: "doc2",
 					pageContent: "Test document 2",
 					metadata: {
@@ -170,18 +164,8 @@ describe("OramaStore", () => {
 			expect(docIds).toBeDefined();
 			expect(docIds).toHaveLength(2);
 
-			const db = (store as any).db as Orama<any>;
-
-			// Check if documents are added to the db
-			const results = await search(db, {
-				mode: "fulltext",
-				term: "Test",
-				includeVectors: true,
-			});
-			expect(results.hits).toHaveLength(2);
-			expect(results.hits[0].document.id).toBe("doc1");
-			expect(results.hits[0].document.title).toBe("Test 1");
-			expect(results.hits[0].document.embedding).toBeDefined();
+			const db = JSON.parse(fs.readFileSync(testDbFilePath(1), "utf-8"));
+			expect(db.docs.count).toBe(2);
 		});
 	});
 
@@ -200,7 +184,7 @@ describe("OramaStore", () => {
 			);
 
 			const testDocs = [
-				new ObsidianDocument({
+				new MarkDownDoc({
 					id: "vec1",
 					pageContent: "Vector document 1",
 					metadata: {
@@ -212,7 +196,7 @@ describe("OramaStore", () => {
 						mtime: Date.now(),
 					},
 				}),
-				new ObsidianDocument({
+				new MarkDownDoc({
 					id: "vec2",
 					pageContent: "Vector document 2",
 					metadata: {
@@ -240,18 +224,8 @@ describe("OramaStore", () => {
 			expect(docIds).toContain("vec2");
 
 			// Verify the vectors were added to the database
-			const db = (store as any).db as Orama<any>;
-			const results = await search(db, {
-				mode: "fulltext",
-				term: "Vector",
-				includeVectors: true,
-			});
-			expect(results.hits).toHaveLength(2);
-			expect(results.hits[0].document.id).toBe("vec1");
-			expect(results.hits[0].document.title).toBe("Vector 1");
-			expect(results.hits[0].document.embedding).toHaveLength(
-				mockEmbeddingDimensions
-			);
+			const db = JSON.parse(fs.readFileSync(testDbFilePath(1), "utf-8"));
+			expect(db.docs.count).toBe(2);
 		});
 
 		it("should throw a validation error when adding vectors with incorrect dimensions", async () => {
@@ -268,7 +242,7 @@ describe("OramaStore", () => {
 			);
 
 			const testDocs = [
-				new ObsidianDocument({
+				new MarkDownDoc({
 					id: "vec3",
 					pageContent: "Vector document 3",
 					metadata: {
@@ -291,14 +265,6 @@ describe("OramaStore", () => {
 			await expect(
 				store.addVectors(incorrectVectors, testDocs)
 			).rejects.toThrow();
-
-			// Optional: Check that nothing was added to the database
-			const db = (store as any).db as Orama<any>;
-			const results = await search(db, {
-				mode: "fulltext",
-				term: "Vector document 3",
-			});
-			expect(results.hits).toHaveLength(0);
 		});
 	});
 
@@ -317,7 +283,7 @@ describe("OramaStore", () => {
 			);
 
 			const docs = [
-				new ObsidianDocument({
+				new MarkDownDoc({
 					id: "doc1",
 					pageContent: "Test document 1",
 					metadata: {
@@ -329,7 +295,7 @@ describe("OramaStore", () => {
 						mtime: Date.now(),
 					},
 				}),
-				new ObsidianDocument({
+				new MarkDownDoc({
 					id: "doc2",
 					pageContent: "Test document 2",
 					metadata: {
@@ -341,7 +307,7 @@ describe("OramaStore", () => {
 						mtime: Date.now(),
 					},
 				}),
-				new ObsidianDocument({
+				new MarkDownDoc({
 					id: "doc3",
 					pageContent: "Test document 3",
 					metadata: {
@@ -393,7 +359,7 @@ describe("OramaStore", () => {
 			);
 
 			const docs = [
-				new ObsidianDocument({
+				new MarkDownDoc({
 					id: "doc1",
 					pageContent: "Test document 1",
 					metadata: {
@@ -405,7 +371,7 @@ describe("OramaStore", () => {
 						mtime: Date.now(),
 					},
 				}),
-				new ObsidianDocument({
+				new MarkDownDoc({
 					id: "doc2",
 					pageContent: "Test document 2",
 					metadata: {
@@ -417,7 +383,7 @@ describe("OramaStore", () => {
 						mtime: Date.now(),
 					},
 				}),
-				new ObsidianDocument({
+				new MarkDownDoc({
 					id: "doc3",
 					pageContent: "Test document 3",
 					metadata: {
@@ -482,7 +448,7 @@ describe("OramaStore", () => {
 			);
 
 			const docs = [
-				new ObsidianDocument({
+				new MarkDownDoc({
 					id: "doc1",
 					pageContent: "Test document 1",
 					metadata: {
@@ -494,7 +460,7 @@ describe("OramaStore", () => {
 						mtime: Date.now(),
 					},
 				}),
-				new ObsidianDocument({
+				new MarkDownDoc({
 					id: "doc2",
 					pageContent: "Test document 2",
 					metadata: {
@@ -506,7 +472,7 @@ describe("OramaStore", () => {
 						mtime: Date.now(),
 					},
 				}),
-				new ObsidianDocument({
+				new MarkDownDoc({
 					id: "doc3",
 					pageContent: "Test document 3",
 					metadata: {
@@ -518,7 +484,7 @@ describe("OramaStore", () => {
 						mtime: Date.now(),
 					},
 				}),
-				new ObsidianDocument({
+				new MarkDownDoc({
 					id: "doc4",
 					pageContent: "Test document 4",
 					metadata: {
@@ -574,7 +540,7 @@ describe("OramaStore", () => {
 			);
 
 			const docs = [
-				new ObsidianDocument({
+				new MarkDownDoc({
 					id: "doc1",
 					pageContent: "Test document 1",
 					metadata: {

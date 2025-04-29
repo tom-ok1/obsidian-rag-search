@@ -16,8 +16,8 @@ import {
 	insert,
 	remove,
 	Results,
+	MODE_VECTOR_SEARCH,
 } from "@orama/orama";
-import { storeFilename } from "./vectorStore";
 import { HashRing } from "./hashring";
 
 /**
@@ -31,6 +31,8 @@ interface OramaDbConfig<T extends AnySchema> {
 	numOfShards: number;
 	schema: T;
 }
+
+export const storeFilename = (id: number) => `vectorstore-${id}.json`;
 
 /**
  * OramaDb manages partitioned Orama databases
@@ -105,6 +107,7 @@ export class OramaDb<T extends AnySchema> {
 			load(db, parsedData);
 
 			oramaDb.shards.push(db);
+			oramaDb.hashRing.addNode(oramaDb.nodeName(i));
 		}
 
 		return oramaDb;
@@ -148,11 +151,12 @@ export class OramaDb<T extends AnySchema> {
 		await Promise.all(insertPromises);
 	}
 
-	async search(
+	search(
 		query: number[],
 		k: number,
-		filter?: WhereCondition<T>
-	): Promise<Result<Schema<T>>[]> {
+		filter?: WhereCondition<T>,
+		mode: typeof MODE_VECTOR_SEARCH = "vector"
+	): Result<Schema<T>>[] {
 		if (this.shards.length === 0) {
 			return [];
 		}
@@ -161,7 +165,7 @@ export class OramaDb<T extends AnySchema> {
 		return this.shards
 			.map((shard) => {
 				return search(shard, {
-					mode: "vector",
+					mode,
 					vector: { value: query, property: "embedding" },
 					limit: k, // Request k results from each shard
 					where: filter,
