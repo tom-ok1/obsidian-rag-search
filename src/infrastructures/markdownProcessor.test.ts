@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { LocalFileAdapter } from "../infrastructures/LocalFileAdapter";
+import { LocalFileAdapter } from "./LocalFileAdapter";
 import { MarkdownProcessor } from "./markdownProcessor";
 import { MD5 } from "crypto-js";
 import * as path from "path";

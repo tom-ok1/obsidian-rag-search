@@ -9,18 +9,9 @@ import { WhereCondition } from "@orama/orama";
 import { FileAdapter } from "../services/fileAdapter";
 import { OramaDb } from "./oramaDb";
 import { HashRing } from "./hashring";
-import { MdDocMetadata } from "src/services/markdownProcessor";
+import { MdDocMetadata } from "src/infrastructures/markdownProcessor";
 
 type MdDocRawSchema = Awaited<ReturnType<OramaStore["documentSchema"]>>;
-
-/**
- * @param id - MD5 hash
- */
-type MdDocSchema = {
-	id?: string;
-	content?: string;
-	embedding?: number[];
-} & MdDocMetadata;
 
 type MdDocInterface = DocumentInterface<MdDocMetadata>;
 
