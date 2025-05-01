@@ -4,6 +4,8 @@ import * as path from "path";
 import * as fs from "fs";
 import { AnySchema, create, save, load, search, count } from "@orama/orama";
 import { HashRing } from "./hashring";
+import { createTokenizer } from "@orama/tokenizers/japanese";
+import { stopwords as japaneseStopwords } from "@orama/stopwords/japanese";
 
 describe("OramaDb", () => {
 	const fileAdapter = new localFile();
@@ -76,12 +78,28 @@ describe("OramaDb", () => {
 		},
 	];
 
-	async function createTestDb() {
-		return await create({
+	function createTestDb() {
+		return create({
 			schema: {
 				id: "string",
 				content: "string",
 				embedding: "vector[3]",
+			},
+		});
+	}
+
+	function createTestDbWithJapaneseTokenizer() {
+		return create({
+			schema: {
+				id: "string",
+				content: "string",
+				embedding: "vector[3]",
+			},
+			components: {
+				tokenizer: createTokenizer({
+					stopWords: japaneseStopwords,
+					language: "japanese",
+				}),
 			},
 		});
 	}
@@ -119,7 +137,7 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			const oramaDb = await OramaDb.create(fileAdapter, config, hashRing);
+			await OramaDb.create(fileAdapter, config, hashRing);
 
 			// Assert - Should create the expected number of files
 			for (let i = 1; i <= numOfShards; i++) {
@@ -131,6 +149,29 @@ describe("OramaDb", () => {
 
 				expect(parsedContent).toBeDefined();
 				expect(parsedContent.schema).toStrictEqual(testSchema);
+			}
+		});
+
+		it("should create a database with japanese tokenizer", async () => {
+			const numOfShards = 3;
+			const config = {
+				dirPath: testDirPath,
+				numOfShards,
+				schema: testSchema,
+			};
+
+			await OramaDb.create(fileAdapter, config, hashRing, "japanese");
+
+			// Assert - Should create the expected number of files
+			for (let i = 1; i <= numOfShards; i++) {
+				const dbFilePath = path.join(testDirPath, storeFilename(i));
+				expect(fs.existsSync(dbFilePath)).toBe(true);
+
+				const fileContent = await fileAdapter.read(dbFilePath);
+				const parsedContent = JSON.parse(fileContent);
+
+				expect(parsedContent).toBeDefined();
+				expect(parsedContent.language).toBe("japanese");
 			}
 		});
 	});
@@ -190,6 +231,41 @@ describe("OramaDb", () => {
 			const results = await loadedDb.search(queryVector, k);
 
 			expect(results.length).toBeLessThanOrEqual(k);
+		});
+
+		it("should load a database with japanese tokenizer", async () => {
+			const numOfShards = 3;
+			const config = {
+				dirPath: testDirPath,
+				numOfShards,
+				schema: testSchema,
+			};
+
+			for (let i = 1; i <= numOfShards; i++) {
+				const db = await createTestDbWithJapaneseTokenizer();
+
+				const rawdata = await save(db);
+				const jsonData = JSON.stringify(rawdata, null, 2);
+
+				const dbFilePath = path.join(testDirPath, storeFilename(i));
+				fs.writeFileSync(dbFilePath, jsonData, "utf-8");
+
+				expect(fs.existsSync(dbFilePath)).toBe(true);
+			}
+
+			const loadedDb = await OramaDb.load(
+				fileAdapter,
+				config,
+				hashRing,
+				"japanese"
+			);
+
+			const randomIdx = Math.floor(Math.random() * numOfShards);
+
+			expect(loadedDb).toBeDefined();
+			expect((loadedDb as any).shards[randomIdx].tokenizer.language).toBe(
+				"japanese"
+			);
 		});
 	});
 

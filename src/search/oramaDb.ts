@@ -19,6 +19,8 @@ import {
 	MODE_VECTOR_SEARCH,
 } from "@orama/orama";
 import { HashRing } from "./hashring";
+import { createTokenizer } from "@orama/tokenizers/japanese";
+import { stopwords as japaneseStopwords } from "@orama/stopwords/japanese";
 
 /**
  * OramaDbConfig defines the configuration for a partitioned Orama database
@@ -70,12 +72,16 @@ export class OramaDb<T extends AnySchema> {
 	static async create<T extends AnySchema>(
 		fileAdapter: FileAdapter,
 		config: OramaDbConfig<T>,
-		hashRing: HashRing
+		hashRing: HashRing,
+		language = "english"
 	) {
 		const oramaDb = new OramaDb(fileAdapter, config, hashRing);
 
 		for (let i = 0; i < config.numOfShards; i++) {
-			const db = create({ schema: config.schema });
+			const db =
+				language === "japanese"
+					? oramaDb.createWithTokenizer(config.schema)
+					: create({ schema: config.schema, language });
 			oramaDb.shards.push(db);
 			oramaDb.hashRing.addNode(oramaDb.nodeName(i));
 			await oramaDb.saveShard(db, i);
@@ -87,7 +93,8 @@ export class OramaDb<T extends AnySchema> {
 	static async load<T extends AnySchema>(
 		fileAdapter: FileAdapter,
 		config: OramaDbConfig<T>,
-		hashRing: HashRing
+		hashRing: HashRing,
+		language = "english"
 	) {
 		const oramaDb = new OramaDb(fileAdapter, config, hashRing);
 
@@ -103,7 +110,10 @@ export class OramaDb<T extends AnySchema> {
 			const rawdata = await fileAdapter.read(filePath);
 			const parsedData = JSON.parse(rawdata);
 
-			const db = create({ schema: config.schema });
+			const db =
+				language === "japanese"
+					? oramaDb.createWithTokenizer(config.schema)
+					: create({ schema: config.schema, language });
 			load(db, parsedData);
 
 			oramaDb.shards.push(db);
@@ -111,6 +121,20 @@ export class OramaDb<T extends AnySchema> {
 		}
 
 		return oramaDb;
+	}
+
+	// currently only supports Japanese
+	private createWithTokenizer(schema: T) {
+		const db = create({
+			schema,
+			components: {
+				tokenizer: createTokenizer({
+					stopWords: japaneseStopwords,
+					language: "japanese",
+				}),
+			},
+		});
+		return db;
 	}
 
 	async insertMany<Doc extends PartialSchemaDeep<TypedDocument<Orama<T>>>>(
