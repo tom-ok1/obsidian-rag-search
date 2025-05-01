@@ -24,20 +24,20 @@ export class MarkDownDoc extends Document<MdDocMetadata> {
 interface OramaStoreConfig {
 	dirPath: string;
 	numOfShards: number;
-	model?: string;
+	file: FileAdapter;
+	modelName?: string;
+	language?: string;
 }
 
 export class OramaStore extends VectorStore {
 	private db: OramaDb<MdDocRawSchema>;
-	private readonly dbConfig: OramaStoreConfig;
+	private modelName?: string;
 
 	private constructor(
-		private readonly file: FileAdapter,
 		embeddings: EmbeddingsInterface,
 		dbConfig: OramaStoreConfig
 	) {
 		super(embeddings, dbConfig);
-		this.dbConfig = dbConfig;
 	}
 
 	_vectorstoreType(): string {
@@ -45,32 +45,36 @@ export class OramaStore extends VectorStore {
 	}
 
 	static async create(
-		file: FileAdapter,
 		embeddings: EmbeddingsInterface,
 		dbConfig: OramaStoreConfig
 	) {
-		const store = new OramaStore(file, embeddings, dbConfig);
+		const store = new OramaStore(embeddings, dbConfig);
+		const { file, dirPath, numOfShards, modelName, language } = dbConfig;
+		store.modelName = modelName;
+
 		const schema = await store.documentSchema();
-		const isExists = await store.file.exists(dbConfig.dirPath);
+		const isExists = await file.exists(dbConfig.dirPath);
 		if (isExists) {
 			store.db = await OramaDb.load(
 				file,
 				{
-					dirPath: dbConfig.dirPath,
-					numOfShards: dbConfig.numOfShards,
+					dirPath,
+					numOfShards,
 					schema,
 				},
-				new HashRing()
+				new HashRing(),
+				language
 			);
 		} else {
 			store.db = await OramaDb.create(
 				file,
 				{
-					dirPath: dbConfig.dirPath,
-					numOfShards: dbConfig.numOfShards,
+					dirPath,
+					numOfShards,
 					schema,
 				},
-				new HashRing()
+				new HashRing(),
+				language
 			);
 		}
 
@@ -121,7 +125,7 @@ export class OramaStore extends VectorStore {
 					tags: document.tags,
 					ctime: document.ctime,
 					mtime: document.mtime,
-					embeddingModel: this.dbConfig.model,
+					embeddingModel: this.modelName,
 				},
 			},
 			score,
@@ -139,7 +143,7 @@ export class OramaStore extends VectorStore {
 			tags: doc.metadata.tags,
 			ctime: doc.metadata.ctime,
 			mtime: doc.metadata.mtime,
-			embeddingModel: this.dbConfig.model,
+			embeddingModel: this.modelName,
 		};
 	}
 
