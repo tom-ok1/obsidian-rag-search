@@ -1,7 +1,7 @@
 import { FileStats, normalizePath, Vault } from "obsidian";
 import { FileAdapter } from "./fileAdapter";
 
-export class VaultFileAdapter implements FileAdapter {
+export class VaultFile implements FileAdapter {
 	constructor(private readonly vault: Vault) {}
 
 	async read(filePath: string): Promise<string> {

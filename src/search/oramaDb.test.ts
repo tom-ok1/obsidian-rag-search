@@ -1,4 +1,4 @@
-import { LocalFileAdapter } from "./LocalFileAdapter";
+import { localFile } from "./LocalFile";
 import { OramaDb, storeFilename } from "./oramaDb";
 import * as path from "path";
 import * as fs from "fs";
@@ -6,7 +6,7 @@ import { AnySchema, create, save, load, search, count } from "@orama/orama";
 import { HashRing } from "./hashring";
 
 describe("OramaDb", () => {
-	const fileAdapter = new LocalFileAdapter();
+	const fileAdapter = new localFile();
 	const hashRing = new HashRing({ replicas: 20 });
 	const testDirPath = path.join(__dirname, "test_db");
 	const testSchema = {

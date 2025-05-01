@@ -1,15 +1,15 @@
-import { LocalFileAdapter } from "./LocalFileAdapter";
+import { localFile } from "./LocalFile";
 import { MarkdownProcessor } from "./markdownProcessor";
 import { MD5 } from "crypto-js";
 import * as path from "path";
 
 describe("MarkdownProcessor", () => {
-	let adapter: LocalFileAdapter;
+	let adapter: localFile;
 	let processor: MarkdownProcessor;
 	const sampleFilePath = path.join(__dirname, "../test/sample.md");
 
 	beforeEach(() => {
-		adapter = new LocalFileAdapter();
+		adapter = new localFile();
 		processor = new MarkdownProcessor(adapter);
 	});
 

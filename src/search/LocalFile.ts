@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { FileStats } from "obsidian";
 
-export class LocalFileAdapter implements FileAdapter {
+export class localFile implements FileAdapter {
 	async read(filePath: string): Promise<string> {
 		return fs.readFileSync(filePath, "utf-8");
 	}
