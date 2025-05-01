@@ -53,7 +53,7 @@ export class OramaStore extends VectorStore {
 		store.modelName = modelName;
 
 		const schema = await store.documentSchema();
-		const isExists = await file.exists(dbConfig.dirPath);
+		const isExists = await file.exists(dirPath);
 		if (isExists) {
 			store.db = await OramaDb.load(
 				file,
