@@ -5,7 +5,7 @@ import { FileStats } from "obsidian";
 
 export class localFile implements FileAdapter {
 	async read(filePath: string): Promise<string> {
-		return fs.readFileSync(filePath, "utf-8");
+		return fs.promises.readFile(filePath, "utf-8");
 	}
 	async write(
 		filename: string,
@@ -13,11 +13,11 @@ export class localFile implements FileAdapter {
 		content: string
 	): Promise<void> {
 		const filePath = path.join(dirname, filename);
-		fs.mkdirSync(dirname, { recursive: true });
-		fs.writeFileSync(filePath, content, "utf-8");
+		await fs.promises.mkdir(dirname, { recursive: true });
+		await fs.promises.writeFile(filePath, content, "utf-8");
 	}
 	async delete(filePath: string): Promise<void> {
-		fs.unlinkSync(filePath);
+		fs.promises.unlink(filePath);
 	}
 	async exists(filePath: string): Promise<boolean> {
 		return fs.existsSync(filePath);
@@ -29,7 +29,7 @@ export class localFile implements FileAdapter {
 		return path.extname(filePath).slice(1);
 	}
 	async stat(filePath: string): Promise<FileStats> {
-		const stats = fs.statSync(filePath);
+		const stats = await fs.promises.stat(filePath);
 		return {
 			ctime: stats.ctimeMs,
 			mtime: stats.mtimeMs,
