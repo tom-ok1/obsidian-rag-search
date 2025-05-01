@@ -1,4 +1,3 @@
-import { beforeEach, describe, expect, it } from "vitest";
 import { HashRing } from "./hashring";
 
 describe("HashRing", () => {

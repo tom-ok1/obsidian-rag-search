@@ -1,11 +1,10 @@
-import { describe, it, expect, afterEach } from "vitest";
 import { MarkDownDoc, OramaStore } from "./vectorStore";
 import { Embeddings } from "@langchain/core/embeddings";
 import * as fs from "fs";
 import * as path from "path";
-import { Orama, create, save, search } from "@orama/orama";
+import { create, save } from "@orama/orama";
 import { LocalFileAdapter } from "./LocalFileAdapter";
-import { OramaDb, storeFilename } from "./oramaDb";
+import { storeFilename } from "./oramaDb";
 
 class MockEmbeddings extends Embeddings {
 	private dimensions: number;
