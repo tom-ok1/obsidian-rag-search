@@ -6,10 +6,10 @@ import {
 } from "@langchain/core/documents";
 import { EmbeddingsInterface } from "@langchain/core/embeddings";
 import { WhereCondition } from "@orama/orama";
-import { FileAdapter } from "../services/fileAdapter";
+import { FileAdapter } from "./fileAdapter";
 import { OramaDb } from "./oramaDb";
 import { HashRing } from "./hashring";
-import { MdDocMetadata } from "src/infrastructures/markdownProcessor";
+import { MdDocMetadata } from "src/search/markdownProcessor";
 
 type MdDocRawSchema = Awaited<ReturnType<OramaStore["documentSchema"]>>;
 

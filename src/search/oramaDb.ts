@@ -1,4 +1,4 @@
-import { FileAdapter } from "../services/fileAdapter";
+import { FileAdapter } from "./fileAdapter";
 import {
 	create,
 	load,
