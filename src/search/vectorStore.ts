@@ -6,7 +6,7 @@ import {
 } from "@langchain/core/documents";
 import { EmbeddingsInterface } from "@langchain/core/embeddings";
 import { WhereCondition } from "@orama/orama";
-import { FileAdapter } from "./fileAdapter";
+import { FileAdapter } from "../adapters/fileAdapter";
 import { OramaDb } from "./oramaDb";
 import { HashRing } from "./hashring";
 import { MdDocMetadata } from "src/search/markdownProcessor";
