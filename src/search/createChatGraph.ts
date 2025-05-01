@@ -6,6 +6,7 @@ import { Document } from "@langchain/core/documents";
 import { BaseLanguageModelInput } from "@langchain/core/language_models/base";
 import { pull } from "langchain/hub";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { MdDocMetadata } from "./markdownProcessor";
 
 export function createChatGraph(
 	vectorStore: VectorStore,
@@ -23,7 +24,7 @@ export function createChatGraph(
 	const stateAnnotation = Annotation.Root({
 		question: Annotation<BaseLanguageModelInput>,
 		search: Annotation<z.infer<typeof searchSchema>>,
-		context: Annotation<Document[]>,
+		context: Annotation<Document<MdDocMetadata>[]>,
 		answer: Annotation<{ content: string; reference: Document[] }>,
 	});
 	const inputStateAnnotation = Annotation.Root({
