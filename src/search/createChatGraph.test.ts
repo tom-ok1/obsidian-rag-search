@@ -1,153 +1,111 @@
+import { describe, it, expect, beforeEach, vi, type Mock } from "vitest";
 import { createChatGraph } from "./createChatGraph";
-import { VectorStore } from "@langchain/core/vectorstores";
-import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { Document } from "@langchain/core/documents";
-import { BaseLanguageModelInput } from "@langchain/core/language_models/base";
-import { AIMessage, AIMessageChunk } from "@langchain/core/messages";
-class MockVectorStore extends VectorStore {
-	private documents: Document[];
+import type { VectorStore } from "@langchain/core/vectorstores";
+import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 
-	_vectorstoreType(): string {
-		return "mock-vectorstore";
-	}
-
-	constructor(documents: Document[] = []) {
-		// Create mock embeddings interface
-		const mockEmbeddings = {
-			embedDocuments: async (texts: string[]) =>
-				texts.map(() => [0.1, 0.2, 0.3]),
-			embedQuery: async (text: string) => [0.1, 0.2, 0.3],
-		};
-		super(mockEmbeddings, {});
-		this.documents = documents;
-	}
-
-	async similaritySearch(_: string, k: number): Promise<Document[]> {
-		return this.documents.slice(0, k);
-	}
-
-	async similaritySearchVectorWithScore(
-		_: number[],
-		k: number
-	): Promise<[Document, number][]> {
-		// Just return documents with dummy scores
-		return this.documents.slice(0, k).map((doc) => [doc, 0.9]);
-	}
-
-	async addVectors(_: number[][], documents: Document[]): Promise<void> {
-		// Simulate adding vectors
-		this.documents = [...this.documents, ...documents];
-	}
-
-	async addDocuments(documents: Document[]): Promise<void> {
-		// Simulate adding documents
-		this.documents = [...this.documents, ...documents];
-	}
-
-	static async fromTexts(): Promise<any> {
-		throw new Error("Not implemented");
-	}
-
-	static async fromDocuments(): Promise<any> {
-		throw new Error("Not implemented");
-	}
-}
-
-class MockAIMessageChunk extends AIMessage implements AIMessageChunk {
-	concat(chunk: AIMessageChunk): AIMessageChunk {
-		// Handle concatenation safely by converting content to string if needed
-		const content =
-			typeof this.content === "string" &&
-			typeof chunk.content === "string"
-				? this.content + chunk.content
-				: "Concatenated content";
-
-		return new MockAIMessageChunk({
-			content: content,
-		});
-	}
-}
-
-// Mock implementation of BaseChatModel
-class MockChatModel extends BaseChatModel<any, AIMessageChunk> {
-	_llmType(): string {
-		return "mock-chat-model";
-	}
-
-	async _generate(_: BaseLanguageModelInput): Promise<any> {
-		return {
-			generations: [
-				{
-					message: new MockAIMessageChunk({
-						content:
-							"This is a mock response based on the provided context.",
-					}),
-					text: "This is a mock response based on the provided context.",
-				},
-			],
-		};
-	}
-
-	withStructuredOutput<T>(_: any): any {
-		return {
-			invoke: async (input: string): Promise<T> => {
-				return {
-					query: "mock search query from " + input,
-				} as unknown as T;
-			},
-		};
-	}
-
-	invoke(_: BaseLanguageModelInput): Promise<AIMessageChunk> {
-		return Promise.resolve(
-			new MockAIMessageChunk({
-				content:
-					"This is a mock response based on the provided context.",
+const makeDocs = (n: number, prefix = "doc") =>
+	Array.from(
+		{ length: n },
+		(_, i) =>
+			new Document({
+				pageContent: `content ${i}`,
+				metadata: { source: `${prefix}${i}` },
 			})
-		);
-	}
+	);
+
+function mockVectorStore(docs: Document[]) {
+	return {
+		similaritySearch: vi.fn(async (_q: string, k: number) =>
+			docs.slice(0, k)
+		),
+	} as unknown as VectorStore;
 }
+
+function mockChatModel() {
+	const analyse = vi.fn();
+	const evaluate = vi.fn();
+	const generate = vi.fn();
+
+	const instance: Partial<BaseChatModel> = {
+		withStructuredOutput: ((_schema: any, _config?: any) => {
+			return {
+				invoke: vi.fn(async (input: any) => {
+					if (typeof input === "string") return analyse(input);
+					return evaluate(input);
+				}),
+			};
+		}) as unknown as BaseChatModel["withStructuredOutput"],
+
+		invoke: generate,
+	};
+	return { instance: instance as BaseChatModel, analyse, evaluate, generate };
+}
+
+const initialDocs = makeDocs(3, "init");
+const extraDocs = makeDocs(2, "extra");
 
 describe("createChatGraph", () => {
-	// Test data
-	const testDocuments = [
-		new Document({
-			pageContent: "This is test document 1",
-			metadata: { source: "test1" },
-		}),
-		new Document({
-			pageContent: "This is test document 2",
-			metadata: { source: "test2" },
-		}),
-		new Document({
-			pageContent: "This is test document 3",
-			metadata: { source: "test3" },
-		}),
-	];
-
-	let mockVectorStore: MockVectorStore;
-	let mockChatModel: MockChatModel;
-
+	let store: VectorStore;
+	let cm: ReturnType<typeof mockChatModel>;
 	beforeEach(() => {
-		mockVectorStore = new MockVectorStore(testDocuments);
-		mockChatModel = new MockChatModel({});
+		store = mockVectorStore(initialDocs);
+		cm = mockChatModel();
+		// default behaviour every test can override
+		cm.analyse.mockResolvedValue({
+			query: "q",
+			searchType: "similarity",
+			k: 2,
+		});
+		cm.evaluate.mockResolvedValue({ isEnough: true });
+		cm.generate.mockResolvedValue({ content: "answer" } as any);
 	});
 
-	it("should create a graph that can be invoked with a question", async () => {
-		const graph = createChatGraph(mockVectorStore, mockChatModel, 2);
+	it("returns answer with initial context", async () => {
+		const graph = createChatGraph(store, cm.instance, 2);
+		const res = await graph.invoke({ question: "What is foo?" });
 
-		const result = await graph.invoke({
-			question: "What is a test question?",
-		});
+		expect(res.context).toEqual(initialDocs.slice(0, 2));
+		expect(cm.analyse).toHaveBeenCalledTimes(1);
+		expect(cm.evaluate).toHaveBeenCalledTimes(1);
+		expect(cm.generate).toHaveBeenCalledTimes(1);
+	});
 
-		expect(result).toHaveProperty("answer");
-		expect(result.question).toEqual("What is a test question?");
-		expect(result.search.query).toEqual(
-			"mock search query from What is a test question?"
+	it("skips extra retrieval when context is enough", async () => {
+		cm.evaluate.mockResolvedValueOnce({ isEnough: true });
+		const graph = createChatGraph(store, cm.instance, 2);
+		await graph.invoke({ question: "bar?" });
+
+		// similaritySearch is called only once
+		expect((store.similaritySearch as Mock).mock.calls).toHaveLength(1);
+	});
+
+	it("performs an additional search when context is insufficient", async () => {
+		// 1st evaluation -> not enough, 2nd -> enough
+		cm.evaluate
+			.mockResolvedValueOnce({
+				isEnough: false,
+				nextParams: {
+					query: "refined",
+					searchType: "similarity",
+					k: 3,
+				},
+			})
+			.mockResolvedValueOnce({ isEnough: true });
+
+		// Make vector store return different docs for the refined query
+		(store.similaritySearch as Mock).mockImplementation(
+			async (q: string, k: number) =>
+				q === "refined"
+					? extraDocs.slice(0, k)
+					: initialDocs.slice(0, k)
 		);
-		expect(result.context).toEqual(testDocuments.slice(0, 2));
-		expect(result.answer).toEqual(
-			"This is a mock response based on the provided context."
-		);
+
+		const graph = createChatGraph(store, cm.instance, 2);
+		const res = await graph.invoke({ question: "baz?" });
+
+		expect((store.similaritySearch as Mock).mock.calls).toHaveLength(2);
+		expect(res.context).toEqual(extraDocs.slice(0, 3));
+		expect(cm.generate).toHaveBeenCalledTimes(1);
 	});
 });
