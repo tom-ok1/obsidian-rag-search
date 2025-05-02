@@ -293,6 +293,52 @@ describe("OramaDb", () => {
 			expect(resultDocuments.length).toBe(testDocuments.length);
 			expect(resultDocuments[0].document).toBeDefined();
 		});
+
+		it("should remove already existing documents with the same Id and insert new ones(save)", async () => {
+			const numOfShards = 3;
+			const config = {
+				dirPath: testDirPath,
+				numOfShards,
+				schema: testSchema,
+			};
+
+			const oramaDb = await OramaDb.create(fileAdapter, config, hashRing);
+			await oramaDb.insertMany(testDocuments);
+
+			const newDocuments = [
+				{
+					id: "docX",
+					content: "Updated Document X axis",
+					embedding: [1, 0, 0],
+				},
+				{
+					id: "docY",
+					content: "Updated Document Y axis",
+					embedding: [0, 1, 0],
+				},
+			];
+
+			await oramaDb.insertMany(newDocuments);
+
+			let resultDocuments: any[] = [];
+
+			for (let i = 0; i < numOfShards; i++) {
+				const testDb = await loadTestDb(i + 1);
+				const res = await search(testDb, { includeVectors: true });
+				resultDocuments = resultDocuments.concat(res.hits);
+			}
+
+			expect(resultDocuments.length).toBe(testDocuments.length);
+			expect(resultDocuments[0].document).toStrictEqual(newDocuments[0]);
+			expect(resultDocuments[1].document).toStrictEqual(newDocuments[1]);
+			// Check that the other documents remain unchanged
+			const remainingDocs = resultDocuments
+				.slice(2)
+				.map((r) => r.document);
+			const originalDocs = testDocuments.slice(2);
+			expect(remainingDocs).toHaveLength(originalDocs.length);
+			expect(remainingDocs).toEqual(expect.arrayContaining(originalDocs));
+		});
 	});
 
 	describe("search method", () => {

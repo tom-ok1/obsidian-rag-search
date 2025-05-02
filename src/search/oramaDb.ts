@@ -5,7 +5,6 @@ import {
 	Orama,
 	save,
 	AnySchema,
-	insertMultiple,
 	PartialSchemaDeep,
 	TypedDocument,
 	search,
@@ -17,6 +16,7 @@ import {
 	remove,
 	Results,
 	MODE_VECTOR_SEARCH,
+	updateMultiple,
 } from "@orama/orama";
 import { HashRing } from "./hashring";
 import { createTokenizer } from "@orama/tokenizers/japanese";
@@ -137,6 +137,10 @@ export class OramaDb<T extends AnySchema> {
 		return db;
 	}
 
+	/**
+	 *  Save all documents, if existing documents are passed, they will be updated
+	 *  if new documents are passed, they will be inserted
+	 */
 	async insertMany<Doc extends PartialSchemaDeep<TypedDocument<Orama<T>>>>(
 		documents: Doc[]
 	): Promise<void> {
@@ -167,7 +171,16 @@ export class OramaDb<T extends AnySchema> {
 				const shardIdx = parseInt(shardKey, 10);
 				const shard = this.shards[shardIdx];
 
-				insertMultiple(shard, docs);
+				const { internalIdToId } =
+					shard.data.docs.sharedInternalDocumentStore;
+				const docIds = docs
+					.map(({ id }) => String(id))
+					.filter((id) => id !== undefined);
+
+				const existingDocIds = docIds.filter((id) =>
+					internalIdToId.includes(id)
+				);
+				updateMultiple(shard, existingDocIds, docs);
 				await this.saveShard(shard, shardIdx);
 			}
 		);
