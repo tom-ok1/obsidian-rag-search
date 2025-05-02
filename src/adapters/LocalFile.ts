@@ -14,10 +14,10 @@ export class localFile implements FileAdapter {
 	): Promise<void> {
 		const filePath = path.join(dirname, filename);
 		await fs.promises.mkdir(dirname, { recursive: true });
-		await fs.promises.writeFile(filePath, content, "utf-8");
+		return fs.promises.writeFile(filePath, content, "utf-8");
 	}
 	async delete(filePath: string): Promise<void> {
-		fs.promises.unlink(filePath);
+		return fs.promises.rm(filePath);
 	}
 	async exists(filePath: string): Promise<boolean> {
 		return fs.existsSync(filePath);
