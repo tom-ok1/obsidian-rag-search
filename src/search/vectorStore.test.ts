@@ -3,7 +3,7 @@ import { Embeddings } from "@langchain/core/embeddings";
 import * as fs from "fs";
 import * as path from "path";
 import { create, save } from "@orama/orama";
-import { localFile } from "../adapters/LocalFile";
+import { localFile } from "../utils/LocalFile";
 import { storeFilename } from "./oramaDb";
 
 class MockEmbeddings extends Embeddings {

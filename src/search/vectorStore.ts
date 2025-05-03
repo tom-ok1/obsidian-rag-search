@@ -9,7 +9,7 @@ import {
 } from "@langchain/core/documents";
 import { EmbeddingsInterface } from "@langchain/core/embeddings";
 import { InternalTypedDocument, Schema, WhereCondition } from "@orama/orama";
-import { FileAdapter } from "../adapters/fileAdapter";
+import { FileAdapter } from "../utils/fileAdapter";
 import { OramaDb } from "./oramaDb";
 import { HashRing } from "./hashring";
 import { MdDocMetadata } from "src/search/markdownProcessor";

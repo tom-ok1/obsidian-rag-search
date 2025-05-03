@@ -1,10 +1,7 @@
-import { FileAdapter } from "src/adapters/fileAdapter";
-import { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { EmbeddingsInterface } from "@langchain/core/embeddings";
+import { FileAdapter } from "src/utils/fileAdapter";
 import { OramaStore } from "./vectorStore";
 import { createChatGraph } from "./createChatGraph";
 import { MarkdownProcessor } from "./markdownProcessor";
-
 type ChatGraph = ReturnType<typeof createChatGraph>;
 
 export class RagManager {
@@ -16,12 +13,31 @@ export class RagManager {
 
 	static async create(params: {
 		file: FileAdapter;
-		embeddings: EmbeddingsInterface;
-		model: BaseChatModel;
 		dirPath: string;
 		numOfShards: number;
 	}) {
-		const { file, embeddings, model, dirPath, numOfShards } = params;
+		const { file, dirPath, numOfShards } = params;
+		const { ChatVertexAI, VertexAIEmbeddings } = await import(
+			"@langchain/google-vertexai"
+		);
+
+		const model = new ChatVertexAI({
+			model: "claude-3-5-sonnet-v2@20241022",
+			streaming: true,
+			streamUsage: false,
+			authOptions: {
+				projectId:
+					process.env.GOOGLE_PROJECT_ID || "tomoya-oki-sandbox",
+			},
+		});
+		const embeddings = new VertexAIEmbeddings({
+			model: "text-embedding-004",
+			authOptions: {
+				projectId:
+					process.env.GOOGLE_PROJECT_ID || "tomoya-oki-sandbox",
+			},
+		});
+
 		const vectorStore = await OramaStore.create(embeddings, {
 			file,
 			dirPath,

@@ -1,4 +1,4 @@
-import { localFile } from "../adapters/LocalFile";
+import { localFile } from "../utils/LocalFile";
 import { OramaDb, storeFilename } from "./oramaDb";
 import * as path from "path";
 import * as fs from "fs";

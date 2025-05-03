@@ -72,8 +72,7 @@ export function createChatGraph(
 		search: Annotation<z.infer<typeof searchSchema>>,
 		context: Annotation<Document<MdDocMetadata>[]>,
 		answer: Annotation<{
-			content: IterableReadableStream<AIMessageChunk>;
-			reference: Document<MdDocMetadata>[];
+			stream: IterableReadableStream<AIMessageChunk>;
 		}>,
 		isEnough: Annotation<boolean>,
 	});
@@ -169,7 +168,7 @@ export function createChatGraph(
 		});
 		const chunkResponse = await model.stream(messages);
 		return {
-			answer: { content: chunkResponse, reference: state.context },
+			answer: { stream: chunkResponse },
 		};
 	}
 
