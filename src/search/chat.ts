@@ -1,7 +1,7 @@
-import { FileAdapter } from "src/utils/fileAdapter";
-import { OramaStore } from "./vectorStore";
-import { createChatGraph } from "./createChatGraph";
-import { MarkdownProcessor } from "./markdownProcessor";
+import { FileAdapter } from "src/utils/fileAdapter.js";
+import { OramaStore } from "./vectorStore.js";
+import { createChatGraph } from "./createChatGraph.js";
+import { MarkdownProcessor } from "./markdownProcessor.js";
 type ChatGraph = ReturnType<typeof createChatGraph>;
 
 export class RagManager {

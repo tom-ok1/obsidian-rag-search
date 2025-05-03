@@ -1,4 +1,4 @@
-import { FileAdapter } from "./fileAdapter";
+import { FileAdapter } from "./fileAdapter.js";
 import * as fs from "fs";
 import * as path from "path";
 import { FileStats } from "obsidian";

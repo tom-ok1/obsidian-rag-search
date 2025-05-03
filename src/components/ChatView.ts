@@ -1,8 +1,8 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { ChatApp } from "./Chat";
-import { RagManager } from "src/search/chat";
+import { ChatApp } from "./Chat.js";
+import { RagManager } from "src/search/chat.js";
 
 export const VIEW_TYPE_CHAT = "rag-chat-react";
 

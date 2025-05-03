@@ -1,6 +1,6 @@
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { MD5 } from "crypto-js";
-import { FileAdapter } from "../utils/fileAdapter";
+import { FileAdapter } from "../utils/fileAdapter.js";
 
 const CHUNK_SIZE = 1000;
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, type Mock } from "vitest";
-import { createChatGraph } from "./createChatGraph";
+import { createChatGraph } from "./createChatGraph.js";
 import { Document } from "@langchain/core/documents";
 import type { VectorStore } from "@langchain/core/vectorstores";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";

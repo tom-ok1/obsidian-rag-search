@@ -24,8 +24,7 @@ export const corslessFetch: typeof fetch = async (input, init = {}) => {
 			const json = JSON.parse(body);
 			wantsStream = !!json.stream;
 		} catch (e) {
-			console.warn("Failed to parse JSON body", e);
-			// do nothing
+			// ignore
 		}
 	}
 

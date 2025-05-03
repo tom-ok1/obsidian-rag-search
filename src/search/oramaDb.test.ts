@@ -1,9 +1,9 @@
-import { localFile } from "../utils/LocalFile";
-import { OramaDb, storeFilename } from "./oramaDb";
+import { localFile } from "../utils/LocalFile.js";
+import { OramaDb, storeFilename } from "./oramaDb.js";
 import * as path from "path";
 import * as fs from "fs";
 import { AnySchema, create, save, load, search, count } from "@orama/orama";
-import { HashRing } from "./hashring";
+import { HashRing } from "./hashring.js";
 import { createTokenizer } from "@orama/tokenizers/japanese";
 import { stopwords as japaneseStopwords } from "@orama/stopwords/japanese";
 

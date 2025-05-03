@@ -1,10 +1,10 @@
-import { MarkDownDoc, OramaStore } from "./vectorStore";
+import { MarkDownDoc, OramaStore } from "./vectorStore.js";
 import { Embeddings } from "@langchain/core/embeddings";
 import * as fs from "fs";
 import * as path from "path";
 import { create, save } from "@orama/orama";
-import { localFile } from "../utils/LocalFile";
-import { storeFilename } from "./oramaDb";
+import { localFile } from "../utils/LocalFile.js";
+import { storeFilename } from "./oramaDb.js";
 
 class MockEmbeddings extends Embeddings {
 	private dimensions: number;

@@ -5,7 +5,7 @@ import { Annotation, StateGraph } from "@langchain/langgraph";
 import { Document } from "@langchain/core/documents";
 import { pull } from "langchain/hub";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { MdDocMetadata } from "./markdownProcessor";
+import { MdDocMetadata } from "./markdownProcessor.js";
 import { IterableReadableStream } from "@langchain/core/utils/stream";
 import { AIMessageChunk } from "@langchain/core/messages";
 

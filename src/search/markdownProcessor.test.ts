@@ -1,5 +1,5 @@
-import { localFile } from "../utils/LocalFile";
-import { MarkdownProcessor } from "./markdownProcessor";
+import { localFile } from "../utils/LocalFile.js";
+import { MarkdownProcessor } from "./markdownProcessor.js";
 import { MD5 } from "crypto-js";
 import * as path from "path";
 

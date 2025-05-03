@@ -1,8 +1,10 @@
 import { Plugin } from "obsidian";
-import { ChatView, VIEW_TYPE_CHAT } from "./src/components/ChatView";
-import { RagManager } from "src/search/chat";
-import { VaultFile } from "src/utils/VaultFile";
-import { corslessFetch } from "src/utils/corslessFetcher";
+import { ChatView, VIEW_TYPE_CHAT } from "./src/components/ChatView.js";
+import { RagManager } from "src/search/chat.js";
+import { VaultFile } from "src/utils/VaultFile.js";
+import { corslessFetch } from "src/utils/corslessFetcher.js";
+import "./styles.css";
+
 globalThis.fetch = corslessFetch;
 
 export default class MyPlugin extends Plugin {

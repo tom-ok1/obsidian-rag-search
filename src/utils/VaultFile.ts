@@ -1,5 +1,5 @@
 import { App, FileStats, normalizePath } from "obsidian";
-import { FileAdapter } from "./fileAdapter";
+import { FileAdapter } from "./fileAdapter.js";
 
 export class VaultFile implements FileAdapter {
 	constructor(private readonly app: App) {}

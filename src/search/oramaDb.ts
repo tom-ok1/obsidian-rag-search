@@ -1,4 +1,4 @@
-import { FileAdapter } from "../utils/fileAdapter";
+import { FileAdapter } from "../utils/fileAdapter.js";
 import {
 	create,
 	load,
@@ -18,7 +18,7 @@ import {
 	MODE_VECTOR_SEARCH,
 	updateMultiple,
 } from "@orama/orama";
-import { HashRing } from "./hashring";
+import { HashRing } from "./hashring.js";
 import { createTokenizer } from "@orama/tokenizers/japanese";
 import { stopwords as japaneseStopwords } from "@orama/stopwords/japanese";
 import { MaxMarginalRelevanceSearchOptions } from "@langchain/core/vectorstores";

@@ -1,4 +1,4 @@
-import { HashRing } from "./hashring";
+import { HashRing } from "./hashring.js";
 
 describe("HashRing", () => {
 	it("should add nodes and increase ring size", () => {
