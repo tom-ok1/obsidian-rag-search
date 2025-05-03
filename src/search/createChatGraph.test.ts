@@ -3,6 +3,8 @@ import { createChatGraph } from "./createChatGraph";
 import { Document } from "@langchain/core/documents";
 import type { VectorStore } from "@langchain/core/vectorstores";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import { AIMessageChunk } from "@langchain/core/messages";
+import { IterableReadableStream } from "@langchain/core/utils/stream";
 
 const makeDocs = (n: number, prefix = "doc") =>
 	Array.from(
@@ -25,7 +27,6 @@ function mockVectorStore(docs: Document[]) {
 function mockChatModel() {
 	const analyse = vi.fn();
 	const evaluate = vi.fn();
-	const generate = vi.fn();
 
 	const instance: Partial<BaseChatModel> = {
 		withStructuredOutput: ((_schema: any, _config?: any) => {
@@ -37,9 +38,16 @@ function mockChatModel() {
 			};
 		}) as unknown as BaseChatModel["withStructuredOutput"],
 
-		invoke: generate,
+		stream: vi.fn(
+			async (_input: any) =>
+				"dummy" as unknown as IterableReadableStream<AIMessageChunk>
+		),
 	};
-	return { instance: instance as BaseChatModel, analyse, evaluate, generate };
+	return {
+		instance: instance as BaseChatModel,
+		analyse,
+		evaluate,
+	};
 }
 
 const initialDocs = makeDocs(3, "init");
@@ -58,7 +66,6 @@ describe("createChatGraph", () => {
 			k: 2,
 		});
 		cm.evaluate.mockResolvedValue({ isEnough: true });
-		cm.generate.mockResolvedValue({ content: "answer" } as any);
 	});
 
 	it("returns answer with initial context", async () => {
@@ -68,7 +75,7 @@ describe("createChatGraph", () => {
 		expect(res.context).toEqual(initialDocs.slice(0, 2));
 		expect(cm.analyse).toHaveBeenCalledTimes(1);
 		expect(cm.evaluate).toHaveBeenCalledTimes(1);
-		expect(cm.generate).toHaveBeenCalledTimes(1);
+		expect(cm.instance.stream).toHaveBeenCalledTimes(1);
 	});
 
 	it("skips extra retrieval when context is enough", async () => {
@@ -78,6 +85,22 @@ describe("createChatGraph", () => {
 
 		// similaritySearch is called only once
 		expect((store.similaritySearch as Mock).mock.calls).toHaveLength(1);
+	});
+
+	it("stop evaluating when exceeding max attempts", async () => {
+		cm.evaluate.mockResolvedValue({
+			isEnough: false,
+			nextParams: {
+				query: "q",
+				searchType: "similarity",
+				k: 2,
+			},
+		});
+		const graph = createChatGraph(store, cm.instance);
+		await graph.invoke({ question: "foo?" });
+		expect(cm.evaluate).toHaveBeenCalledTimes(3);
+		expect(cm.instance.stream).toHaveBeenCalledTimes(1);
+		expect((store.similaritySearch as Mock).mock.calls).toHaveLength(4);
 	});
 
 	it("performs an additional search when context is insufficient", async () => {
@@ -106,6 +129,6 @@ describe("createChatGraph", () => {
 
 		expect((store.similaritySearch as Mock).mock.calls).toHaveLength(2);
 		expect(res.context).toEqual(extraDocs.slice(0, 3));
-		expect(cm.generate).toHaveBeenCalledTimes(1);
+		expect(cm.instance.stream).toHaveBeenCalledTimes(1);
 	});
 });

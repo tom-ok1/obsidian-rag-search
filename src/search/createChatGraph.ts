@@ -6,6 +6,8 @@ import { Document } from "@langchain/core/documents";
 import { pull } from "langchain/hub";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { MdDocMetadata } from "./markdownProcessor";
+import { IterableReadableStream } from "@langchain/core/utils/stream";
+import { AIMessageChunk } from "@langchain/core/messages";
 
 const MAX_RETRIES = 3;
 
@@ -70,7 +72,7 @@ export function createChatGraph(
 		search: Annotation<z.infer<typeof searchSchema>>,
 		context: Annotation<Document<MdDocMetadata>[]>,
 		answer: Annotation<{
-			content: string;
+			content: IterableReadableStream<AIMessageChunk>;
 			reference: Document<MdDocMetadata>[];
 		}>,
 		isEnough: Annotation<boolean>,
@@ -165,9 +167,9 @@ export function createChatGraph(
 			question: state.question,
 			context: docsContent,
 		});
-		const response = await model.invoke(messages);
+		const chunkResponse = await model.stream(messages);
 		return {
-			answer: { content: response.content, reference: state.context },
+			answer: { content: chunkResponse, reference: state.context },
 		};
 	}
 
