@@ -1,4 +1,4 @@
-import { localFile } from "../adapters/LocalFile";
+import { localFile } from "../utils/LocalFile";
 import { MarkdownProcessor } from "./markdownProcessor";
 import { MD5 } from "crypto-js";
 import * as path from "path";

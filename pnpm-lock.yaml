@@ -16,7 +16,7 @@ importers:
         version: 0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3)
       '@langchain/langgraph':
         specifier: ^0.2.67
-        version: 0.2.67(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod-to-json-schema@3.24.5(zod@3.24.3))
+        version: 0.2.67(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(react@19.1.0)(zod-to-json-schema@3.24.5(zod@3.24.3))
       '@orama/orama':
         specifier: ^3.1.6
         version: 3.1.6
@@ -32,6 +32,12 @@ importers:
       langchain:
         specifier: ^0.3.24
         version: 0.3.24(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(@langchain/google-genai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(axios@1.9.0)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(ws@8.18.1)
+      react:
+        specifier: ^19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: ^19.1.0
+        version: 19.1.0(react@19.1.0)
       zod:
         specifier: ^3.24.3
         version: 3.24.3
@@ -48,6 +54,12 @@ importers:
       '@types/node':
         specifier: ^22.15.2
         version: 22.15.2
+      '@types/react':
+        specifier: ^19.1.2
+        version: 19.1.2
+      '@types/react-dom':
+        specifier: ^19.1.3
+        version: 19.1.3(@types/react@19.1.2)
       '@typescript-eslint/eslint-plugin':
         specifier: 5.29.0
         version: 5.29.0(@typescript-eslint/parser@5.29.0(eslint@8.57.1)(typescript@5.8.3))(eslint@8.57.1)(typescript@5.8.3)
@@ -1064,6 +1076,14 @@ packages:
   '@types/node@22.15.2':
     resolution: {integrity: sha512-uKXqKN9beGoMdBfcaTY1ecwz6ctxuJAcUlwE55938g0ZJ8lRxwAZqRz2AJ4pzpt5dHdTPMB863UZ0ESiFUcP7A==}
 
+  '@types/react-dom@19.1.3':
+    resolution: {integrity: sha512-rJXC08OG0h3W6wDMFxQrZF00Kq6qQvw0djHRdzl3U5DnIERz0MRce3WVc7IS6JYBwtaP/DwYtRRjVlvivNveKg==}
+    peerDependencies:
+      '@types/react': ^19.0.0
+
+  '@types/react@19.1.2':
+    resolution: {integrity: sha512-oxLPMytKchWGbnQM9O7D67uPa9paTNxO7jVoNMXgkkErULBPhPARCfkKL9ytcIJJRGjbsVwW4ugJzyFFvm/Tiw==}
+
   '@types/retry@0.12.0':
     resolution: {integrity: sha512-wWKOClTTiizcZhXnPY4wikVAwmdYHp8q6DmC+EJUzAMsycb7HB32Kh9RN4+0gExjmPmZSAQjgURXIGATPegAvA==}
 
@@ -1311,6 +1331,9 @@ packages:
 
   crypto-js@4.2.0:
     resolution: {integrity: sha512-KALDyEYgpY+Rlob/iriUtjV6d5Eq+Y191A5g4UqLAi8CyGP9N1+FdVbkc1SxKc2r4YAYqG8JzO2KGL+AizD70Q==}
+
+  csstype@3.1.3:
+    resolution: {integrity: sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==}
 
   debug@3.2.7:
     resolution: {integrity: sha512-CFjzYYAi4ThfiQvizrFQevTTXHtnCqWfe7x1AhgEscTz6ZbLbfoLRLPugTQyBth6f8ZERVUSyWHFD/7Wu4t1XQ==}
@@ -2054,6 +2077,15 @@ packages:
   queue-microtask@1.2.3:
     resolution: {integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==}
 
+  react-dom@19.1.0:
+    resolution: {integrity: sha512-Xs1hdnE+DyKgeHJeJznQmYMIBG3TKIHJJT95Q58nHLSrElKlGQqDTR2HQ9fx5CN/Gk6Vh/kupBTDLU11/nDk/g==}
+    peerDependencies:
+      react: ^19.1.0
+
+  react@19.1.0:
+    resolution: {integrity: sha512-FS+XFBNvn3GTAWq26joslQgWNoFu08F4kl0J4CgdNKADkdSGXQyTCnKteIAJy96Br6YbpEU1LSzV5dYtjMkMDg==}
+    engines: {node: '>=0.10.0'}
+
   readable-stream@4.7.0:
     resolution: {integrity: sha512-oIGGmcpTLwPga8Bn6/Z75SVaH1z5dUut2ibSyAMVhmUggWpmDn2dapB0n7f8nwaSiRtepAsfJyfXIO5DCVAODg==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
@@ -2102,6 +2134,9 @@ packages:
 
   safe-buffer@5.2.1:
     resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
+
+  scheduler@0.26.0:
+    resolution: {integrity: sha512-NlHwttCI/l5gCPR3D1nNXtWABUmBwvZpEQiD4IXSbIDq8BzLIK/7Ir5gTFSGZDUu37K5cMNp0hFtzO38sC7gWA==}
 
   semver@7.7.1:
     resolution: {integrity: sha512-hlq8tAfn0m/61p4BVRcPzIGr6LKiMwo4VM6dGi6pt4qcRkmNzTcWq6eCEjEh+qXjkMDvPlOFFSGwQjoEa6gyMA==}
@@ -2769,7 +2804,7 @@ snapshots:
       '@langchain/core': 0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3))
       uuid: 10.0.0
 
-  '@langchain/langgraph-sdk@0.0.70(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))':
+  '@langchain/langgraph-sdk@0.0.70(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(react@19.1.0)':
     dependencies:
       '@types/json-schema': 7.0.15
       p-queue: 6.6.2
@@ -2777,12 +2812,13 @@ snapshots:
       uuid: 9.0.1
     optionalDependencies:
       '@langchain/core': 0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3))
+      react: 19.1.0
 
-  '@langchain/langgraph@0.2.67(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod-to-json-schema@3.24.5(zod@3.24.3))':
+  '@langchain/langgraph@0.2.67(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(react@19.1.0)(zod-to-json-schema@3.24.5(zod@3.24.3))':
     dependencies:
       '@langchain/core': 0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3))
       '@langchain/langgraph-checkpoint': 0.0.17(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))
-      '@langchain/langgraph-sdk': 0.0.70(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))
+      '@langchain/langgraph-sdk': 0.0.70(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(react@19.1.0)
       uuid: 10.0.0
       zod: 3.24.3
     optionalDependencies:
@@ -2930,6 +2966,14 @@ snapshots:
   '@types/node@22.15.2':
     dependencies:
       undici-types: 6.21.0
+
+  '@types/react-dom@19.1.3(@types/react@19.1.2)':
+    dependencies:
+      '@types/react': 19.1.2
+
+  '@types/react@19.1.2':
+    dependencies:
+      csstype: 3.1.3
 
   '@types/retry@0.12.0': {}
 
@@ -3193,6 +3237,8 @@ snapshots:
       which: 2.0.2
 
   crypto-js@4.2.0: {}
+
+  csstype@3.1.3: {}
 
   debug@3.2.7:
     dependencies:
@@ -3956,6 +4002,13 @@ snapshots:
 
   queue-microtask@1.2.3: {}
 
+  react-dom@19.1.0(react@19.1.0):
+    dependencies:
+      react: 19.1.0
+      scheduler: 0.26.0
+
+  react@19.1.0: {}
+
   readable-stream@4.7.0:
     dependencies:
       abort-controller: 3.0.0
@@ -4017,6 +4070,8 @@ snapshots:
       queue-microtask: 1.2.3
 
   safe-buffer@5.2.1: {}
+
+  scheduler@0.26.0: {}
 
   semver@7.7.1: {}
 
