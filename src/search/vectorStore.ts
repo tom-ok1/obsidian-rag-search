@@ -96,7 +96,7 @@ export class OramaStore extends VectorStore {
 		const documentsWithEmbeddings = documents.map((doc, index) =>
 			this.mapDocumentToSchema(doc, vectors[index])
 		);
-		await this.db.insertMany(documentsWithEmbeddings);
+		await this.db.saveMany(documentsWithEmbeddings);
 		return documents.map(({ id }) => id).filter((id) => id !== undefined);
 	}
 
@@ -107,7 +107,7 @@ export class OramaStore extends VectorStore {
 		const documentsWithEmbeddings = documents.map((doc, index) =>
 			this.mapDocumentToSchema(doc, vectorizedDocuments[index])
 		);
-		await this.db.insertMany(documentsWithEmbeddings);
+		await this.db.saveMany(documentsWithEmbeddings);
 		return documents.map(({ id }) => id).filter((id) => id !== undefined);
 	}
 

@@ -142,7 +142,7 @@ export class OramaDb<T extends AnySchema> {
 	 *  Save all documents, if existing documents are passed, they will be updated
 	 *  if new documents are passed, they will be inserted
 	 */
-	async insertMany<Doc extends PartialSchemaDeep<TypedDocument<Orama<T>>>>(
+	async saveMany<Doc extends PartialSchemaDeep<TypedDocument<Orama<T>>>>(
 		documents: Doc[]
 	): Promise<void> {
 		if (!documents || documents.length === 0) {

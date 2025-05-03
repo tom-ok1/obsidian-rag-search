@@ -269,7 +269,7 @@ describe("OramaDb", () => {
 		});
 	});
 
-	describe("insertMany method", () => {
+	describe("saveMany method", () => {
 		it("should distribute documents to correct partitions and insert them", async () => {
 			const numOfShards = 3;
 			const config = {
@@ -279,7 +279,7 @@ describe("OramaDb", () => {
 			};
 
 			const oramaDb = await OramaDb.create(fileAdapter, config, hashRing);
-			await oramaDb.insertMany(testDocuments);
+			await oramaDb.saveMany(testDocuments);
 
 			let resultDocuments: any[] = [];
 
@@ -303,7 +303,7 @@ describe("OramaDb", () => {
 			};
 
 			const oramaDb = await OramaDb.create(fileAdapter, config, hashRing);
-			await oramaDb.insertMany(testDocuments);
+			await oramaDb.saveMany(testDocuments);
 
 			const newDocuments = [
 				{
@@ -318,7 +318,7 @@ describe("OramaDb", () => {
 				},
 			];
 
-			await oramaDb.insertMany(newDocuments);
+			await oramaDb.saveMany(newDocuments);
 
 			let resultDocuments: any[] = [];
 
@@ -352,7 +352,7 @@ describe("OramaDb", () => {
 			const documents = JSON.parse(JSON.stringify(testDocuments));
 
 			const oramaDb = await OramaDb.create(fileAdapter, config, hashRing);
-			await oramaDb.insertMany(documents);
+			await oramaDb.saveMany(documents);
 
 			// Query vector along Z axis direction
 			const queryVector = [0, 0, 1];
@@ -376,7 +376,7 @@ describe("OramaDb", () => {
 			const documents = JSON.parse(JSON.stringify(testDocuments));
 
 			const oramaDb = await OramaDb.create(fileAdapter, config, hashRing);
-			await oramaDb.insertMany(documents);
+			await oramaDb.saveMany(documents);
 
 			const queryVector = [0.6, 0.7, 0.8];
 			const k = 5;
@@ -413,7 +413,7 @@ describe("OramaDb", () => {
 				config,
 				localHashRing
 			);
-			await oramaDb.insertMany(documents);
+			await oramaDb.saveMany(documents);
 			await oramaDb.rebalance(finalShards, allIds);
 
 			expect((oramaDb as any).config.numOfShards).toBe(finalShards);
@@ -459,7 +459,7 @@ describe("OramaDb", () => {
 				config,
 				localHashRing
 			);
-			await oramaDb.insertMany(documents);
+			await oramaDb.saveMany(documents);
 			await oramaDb.rebalance(finalShards, allIds);
 
 			expect((oramaDb as any).config.numOfShards).toBe(finalShards);
@@ -503,7 +503,7 @@ describe("OramaDb", () => {
 				config,
 				localHashRing
 			);
-			await oramaDb.insertMany(documents);
+			await oramaDb.saveMany(documents);
 
 			// Spy on saveShard to ensure it's not called unnecessarily
 			const saveShardSpy = vi.spyOn(oramaDb as any, "saveShard");
