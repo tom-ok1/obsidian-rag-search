@@ -15,11 +15,11 @@ const context = await esbuild.context({
 	banner: {
 		js: banner,
 	},
-	// To ignore node dependencies error
 	platform: "node",
 	entryPoints: ["main.ts"],
 	bundle: true,
 	external: [
+		// "node:*",
 		"obsidian",
 		"electron",
 		"@codemirror/autocomplete",
