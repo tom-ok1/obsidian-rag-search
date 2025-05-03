@@ -1,19 +1,22 @@
-import { VectorStore } from "@langchain/core/vectorstores";
+import {
+	MaxMarginalRelevanceSearchOptions,
+	VectorStore,
+} from "@langchain/core/vectorstores";
 import {
 	Document,
 	DocumentInput,
 	DocumentInterface,
 } from "@langchain/core/documents";
 import { EmbeddingsInterface } from "@langchain/core/embeddings";
-import { WhereCondition } from "@orama/orama";
+import { InternalTypedDocument, Schema, WhereCondition } from "@orama/orama";
 import { FileAdapter } from "../adapters/fileAdapter";
 import { OramaDb } from "./oramaDb";
 import { HashRing } from "./hashring";
 import { MdDocMetadata } from "src/search/markdownProcessor";
+import { Callbacks } from "@langchain/core/callbacks/manager";
 
 type MdDocRawSchema = Awaited<ReturnType<OramaStore["documentSchema"]>>;
-
-type MdDocInterface = DocumentInterface<MdDocMetadata>;
+type MdDocInterface = DocumentInterface<Partial<Schema<MdDocRawSchema>>>;
 
 export class MarkDownDoc extends Document<MdDocMetadata> {
 	constructor(fields: DocumentInput<MdDocMetadata>) {
@@ -113,23 +116,47 @@ export class OramaStore extends VectorStore {
 		k: number,
 		filter?: Partial<WhereCondition<MdDocRawSchema>>
 	): Promise<[MdDocInterface, number][]> {
-		const results = this.db.search(query, k, filter);
+		const results = this.db.search(query, { k, filter });
 		return results.map(({ document, score }) => [
-			{
-				id: document.id,
-				pageContent: document.content,
-				metadata: {
-					title: document.title,
-					path: document.path,
-					extension: document.extension,
-					tags: document.tags,
-					ctime: document.ctime,
-					mtime: document.mtime,
-					embeddingModel: this.modelName,
-				},
-			},
+			this.toDocument(document),
 			score,
 		]);
+	}
+
+	async maxMarginalRelevanceSearch(
+		query: string,
+		options: MaxMarginalRelevanceSearchOptions<
+			WhereCondition<MdDocRawSchema>
+		>,
+		_callbacks: Callbacks | undefined
+	): Promise<MdDocInterface[]> {
+		const { k, fetchK, lambda, filter } = options;
+		const embedding = await this.embeddings.embedQuery(query);
+		const results = await this.db.search(embedding, {
+			k,
+			fetchK,
+			lambda,
+			filter,
+		});
+		return results.map(({ document }) => this.toDocument(document));
+	}
+
+	private toDocument(
+		document: InternalTypedDocument<Schema<MdDocRawSchema>>
+	): MdDocInterface {
+		return {
+			id: document.id,
+			pageContent: document.content,
+			metadata: {
+				title: document.title,
+				path: document.path,
+				extension: document.extension,
+				tags: document.tags,
+				ctime: document.ctime,
+				mtime: document.mtime,
+				embeddingModel: this.modelName,
+			},
+		};
 	}
 
 	private mapDocumentToSchema(doc: MdDocInterface, embedding: number[]) {

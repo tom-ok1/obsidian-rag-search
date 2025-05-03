@@ -1,4 +1,4 @@
-import { App, FileStats, normalizePath, Vault } from "obsidian";
+import { App, FileStats, normalizePath } from "obsidian";
 import { FileAdapter } from "./fileAdapter";
 
 export class VaultFile implements FileAdapter {

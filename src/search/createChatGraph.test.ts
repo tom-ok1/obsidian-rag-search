@@ -62,7 +62,7 @@ describe("createChatGraph", () => {
 	});
 
 	it("returns answer with initial context", async () => {
-		const graph = createChatGraph(store, cm.instance, 2);
+		const graph = createChatGraph(store, cm.instance);
 		const res = await graph.invoke({ question: "What is foo?" });
 
 		expect(res.context).toEqual(initialDocs.slice(0, 2));
@@ -73,7 +73,7 @@ describe("createChatGraph", () => {
 
 	it("skips extra retrieval when context is enough", async () => {
 		cm.evaluate.mockResolvedValueOnce({ isEnough: true });
-		const graph = createChatGraph(store, cm.instance, 2);
+		const graph = createChatGraph(store, cm.instance);
 		await graph.invoke({ question: "bar?" });
 
 		// similaritySearch is called only once
@@ -101,7 +101,7 @@ describe("createChatGraph", () => {
 					: initialDocs.slice(0, k)
 		);
 
-		const graph = createChatGraph(store, cm.instance, 2);
+		const graph = createChatGraph(store, cm.instance);
 		const res = await graph.invoke({ question: "baz?" });
 
 		expect((store.similaritySearch as Mock).mock.calls).toHaveLength(2);

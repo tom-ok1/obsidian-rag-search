@@ -228,7 +228,7 @@ describe("OramaDb", () => {
 
 			const queryVector = [0.5, 0.5, 0.5];
 			const k = 3;
-			const results = await loadedDb.search(queryVector, k);
+			const results = await loadedDb.search(queryVector, { k });
 
 			expect(results.length).toBeLessThanOrEqual(k);
 		});
@@ -358,7 +358,7 @@ describe("OramaDb", () => {
 			const queryVector = [0, 0, 1];
 			const k = 3;
 
-			const results = await oramaDb.search(queryVector, k);
+			const results = await oramaDb.search(queryVector, { k });
 			expect(results.length).toBeLessThanOrEqual(k);
 			expect(results[0].id).toBe("docZ");
 			expect(results[1].id).toBe("docZ2");
@@ -382,8 +382,9 @@ describe("OramaDb", () => {
 			const k = 5;
 
 			// Execute search with filter
-			const results = await oramaDb.search(queryVector, k, {
-				content: "close to",
+			const results = await oramaDb.search(queryVector, {
+				k,
+				filter: { content: "close to" },
 			});
 
 			// Should only return docs matching the filter, still ordered by similarity
@@ -433,7 +434,7 @@ describe("OramaDb", () => {
 			// Check search still works and returns correct results
 			const queryVector = [0, 0, 1]; // Search for Z-axis docs
 			const k = 3;
-			const results = await oramaDb.search(queryVector, k);
+			const results = await oramaDb.search(queryVector, { k });
 			expect(results.length).toBeLessThanOrEqual(k);
 			expect(results[0].id).toBe("docZ");
 			expect(results[1].id).toBe("docZ2");
@@ -479,7 +480,7 @@ describe("OramaDb", () => {
 			// Check search still works
 			const queryVector = [1, 0, 0]; // Search for X-axis docs
 			const k = 3;
-			const results = await oramaDb.search(queryVector, k);
+			const results = await oramaDb.search(queryVector, { k });
 			expect(results.length).toBeLessThanOrEqual(k);
 			expect(results[0].id).toBe("docX");
 			expect(results[2].id).toBe("docX2");

@@ -7,17 +7,18 @@ import { pull } from "langchain/hub";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { MdDocMetadata } from "./markdownProcessor";
 
+const MAX_RETRIES = 3;
+
 export function createChatGraph(
 	vectorStore: VectorStore,
-	model: BaseChatModel,
-	k: number = 10
+	model: BaseChatModel
 ) {
 	// 1. Define the state schema
 	const searchSchema = z.object({
 		query: z
 			.string()
 			.describe(
-				"Search query: rewrite the user's natural-language request into a concise, keyword-focused query suitable for a vector database."
+				"Search query: rewrite the user's natural-language request into a concise, keyword-focused query suitable for a vector database. Make sure to use the same language as the original question."
 			),
 		searchType: z
 			.enum(["similarity", "mmr"])
@@ -30,7 +31,7 @@ export function createChatGraph(
 			.min(1)
 			.max(40)
 			.default(4)
-			.describe("Number of documents to return (1–40). Default is 4."),
+			.describe("Number of documents to return (1–40)."),
 		fetchK: z
 			.number()
 			.min(1)
@@ -45,12 +46,8 @@ export function createChatGraph(
 			.max(1)
 			.optional()
 			.describe(
-				"MMR diversity parameter (0 = maximum diversity, 1 = minimum diversity). Optional."
+				"For MMR: diversity parameter (0 = maximum diversity, 1 = minimum diversity). Optional. default is 0.8."
 			),
-		filter: z
-			.record(z.any())
-			.optional()
-			.describe("Optional metadata filter to apply before searching."),
 	});
 
 	const evalSchema = z.object({
@@ -65,6 +62,8 @@ export function createChatGraph(
 				"If not enough, the LLM’s suggested updated search parameters for the next retrieval round."
 			),
 	});
+
+	let attemptsCount = 0;
 
 	const stateAnnotation = Annotation.Root({
 		question: Annotation<string>,
@@ -101,8 +100,7 @@ export function createChatGraph(
 				{
 					k: search.k,
 					fetchK: search.fetchK ?? search.k * 4,
-					lambda: search.lambda ?? 0.3,
-					filter: search.filter,
+					lambda: search.lambda ?? 0.8,
 				},
 				undefined
 			);
@@ -112,18 +110,23 @@ export function createChatGraph(
 		// Similarity search
 		const retrievedDocs = await vectorStore.similaritySearch(
 			search.query,
-			search.k,
-			search.filter
+			search.k
 		);
 
 		return { context: retrievedDocs };
 	}
 
 	async function evaluateContext(state: typeof stateAnnotation.State) {
+		if (attemptsCount >= MAX_RETRIES) {
+			return { isEnough: true };
+		}
+		attemptsCount++;
+
 		const evalPrompt = ChatPromptTemplate.fromMessages([
 			[
 				"system",
 				"You are an assistant that evaluates whether the retrieved documents adequately cover the user's question. " +
+					"If there are not enough documents, suggest new search parameters to improve the results. " +
 					"Please respond strictly in JSON following the provided schema.",
 			],
 			[
@@ -132,7 +135,9 @@ export function createChatGraph(
 					"User question:\n",
 					"{query}\n\n",
 					"Retrieved documents (each separated by a blank line):\n",
-					"{docs}",
+					"{docs}\n\n",
+					"Previous search parameters:\n",
+					"{search}\n\n",
 				].join(""),
 			],
 		]);
@@ -141,6 +146,7 @@ export function createChatGraph(
 		const messages = await evalPrompt.invoke({
 			query: state.question,
 			docs: docText,
+			search: state.search,
 		});
 
 		const result = await structuredLlm.invoke(messages);

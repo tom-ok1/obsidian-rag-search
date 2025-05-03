@@ -21,6 +21,7 @@ import {
 import { HashRing } from "./hashring";
 import { createTokenizer } from "@orama/tokenizers/japanese";
 import { stopwords as japaneseStopwords } from "@orama/stopwords/japanese";
+import { MaxMarginalRelevanceSearchOptions } from "@langchain/core/vectorstores";
 
 /**
  * OramaDbConfig defines the configuration for a partitioned Orama database
@@ -190,23 +191,24 @@ export class OramaDb<T extends AnySchema> {
 
 	search(
 		query: number[],
-		k: number,
-		filter?: WhereCondition<T>,
-		mode: typeof MODE_VECTOR_SEARCH = "vector"
+		options: MaxMarginalRelevanceSearchOptions<WhereCondition<T>>
 	): Result<Schema<T>>[] {
 		if (this.shards.length === 0) {
 			return [];
 		}
 
+		const { filter, k, fetchK, lambda } = options;
+
 		// Search each shard
 		return this.shards
 			.map((shard) => {
 				return search(shard, {
-					mode,
+					mode: MODE_VECTOR_SEARCH,
 					vector: { value: query, property: "embedding" },
-					limit: k, // Request k results from each shard
 					where: filter,
-					similarity: 0.3,
+					limit: fetchK,
+					offset: 0,
+					similarity: lambda,
 				});
 			})
 			.flatMap((result: Results<Schema<T>>) => result.hits)
