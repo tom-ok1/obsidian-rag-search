@@ -210,10 +210,9 @@ export function createChatGraph(
 				.map((msg) => `${msg.role}: ${msg.content}`)
 				.join("\n"),
 		});
-		const chunkResponse = await model.stream(messages);
-		// const [clientStream, historyStream] = chunkResponse.tee();
+		const stream = await model.stream(messages);
 		return {
-			answer: { stream: chunkResponse },
+			answer: { stream },
 		};
 	}
 
