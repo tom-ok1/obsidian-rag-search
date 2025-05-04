@@ -1,117 +1,139 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, FormEvent } from "react";
+import {
+	Box,
+	Stack,
+	Paper,
+	TextField,
+	IconButton,
+	CircularProgress,
+	Skeleton,
+	useTheme,
+} from "@mui/material";
+import SendIcon from "@mui/icons-material/Send";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Send } from "lucide-react";
-import type { RagManager } from "../search/chat.js";
+import type { ChatService } from "../search/chatService.js";
+import { Msg, useChatStream } from "src/hooks/useChatStream.js";
 
-type Msg = { role: "user" | "bot"; content: string; loading?: boolean };
+const MessageBubble: React.FC<{ message: Msg }> = ({ message }) => {
+	const theme = useTheme();
+	const isUser = message.role === "user";
+	const bg = isUser
+		? theme.palette.primary.main
+		: "var(--background-primary)";
+	const color = isUser
+		? theme.palette.getContrastText(theme.palette.primary.main)
+		: "var(--text-normal)";
+	const showSkeleton = message.loading && message.content === "";
 
-export const ChatApp: React.FC<{ chat: RagManager }> = ({ chat }) => {
-	const [input, setInput] = useState("");
-	const [messages, setMessages] = useState<Msg[]>([]);
+	return (
+		<motion.div
+			initial={{ opacity: 0, y: 8 }}
+			animate={{ opacity: 1, y: 0 }}
+			exit={{ opacity: 0 }}
+		>
+			<Paper
+				elevation={1}
+				sx={{
+					maxWidth: 640,
+					px: 2,
+					py: 1.5,
+					alignSelf: isUser ? "flex-end" : "flex-start",
+					bgcolor: bg,
+					color,
+					whiteSpace: "pre-wrap",
+					backgroundImage: "none",
+				}}
+			>
+				{showSkeleton ? (
+					<Stack spacing={0.5}>
+						{[...Array(2)].map((_, i) => (
+							<Skeleton
+								key={i}
+								variant="text"
+								width={`${60 + Math.random() * 30}%`}
+								sx={{
+									bgcolor: "var(--background-modifier-hover)",
+								}}
+							/>
+						))}
+					</Stack>
+				) : (
+					message.content
+				)}
+			</Paper>
+		</motion.div>
+	);
+};
+
+const MessageList: React.FC<{ messages: Msg[] }> = ({ messages }) => {
 	const bottomRef = useRef<HTMLDivElement>(null);
-
 	useEffect(
 		() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
 		[messages]
 	);
+	return (
+		<Stack flex={1} overflow="auto" px={2} py={3} spacing={2}>
+			<AnimatePresence initial={false}>
+				{messages.map((m, i) => (
+					<MessageBubble key={i} message={m} />
+				))}
+			</AnimatePresence>
+			<div ref={bottomRef} />
+		</Stack>
+	);
+};
 
-	const appendBotBubble = (initial = "") =>
-		setMessages((p) => [
-			...p,
-			{ role: "bot", content: initial, loading: true },
-		]);
+export const ChatApp: React.FC<{ chat: ChatService }> = ({ chat }) => {
+	const { messages, isLoading, ask } = useChatStream(chat);
+	const [input, setInput] = useState("");
 
-	const submit = async (e: React.FormEvent) => {
+	const handleSubmit = (e: FormEvent) => {
 		e.preventDefault();
-		if (!input.trim()) return;
-		const question = input.trim();
+		ask(input);
 		setInput("");
-		setMessages((p) => [...p, { role: "user", content: question }]);
-		appendBotBubble();
-
-		try {
-			const {
-				answer: { stream },
-			} = await chat.search(question);
-			const reader = stream.getReader();
-			let buf = "";
-
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-				buf += value.content;
-				setMessages((p) =>
-					p.map((m, i) =>
-						i === p.length - 1 && m.role === "bot"
-							? { ...m, content: buf }
-							: m
-					)
-				);
-			}
-
-			setMessages((p) =>
-				p.map((m, i) =>
-					i === p.length - 1 && m.role === "bot"
-						? { ...m, loading: false }
-						: m
-				)
-			);
-		} catch (err) {
-			appendBotBubble(`Error: ${String(err)}`);
-		}
 	};
 
 	return (
-		<div className="flex flex-col h-full bg-surface text-text font-sans">
-			<div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
-				<AnimatePresence initial={false}>
-					{messages.map((m, i) => (
-						<motion.div
-							key={i}
-							initial={{ opacity: 0, y: 10 }}
-							animate={{ opacity: 1, y: 0 }}
-							exit={{ opacity: 0 }}
-							className={`max-w-2xl whitespace-pre-wrap shadow
-                ${
-					m.role === "user"
-						? "self-end bg-primary/25 text-text rounded-xl px-4 py-2"
-						: "self-start bg-surfaceAlt border border-surface rounded-xl px-4 py-2"
-				}`}
-						>
-							{m.content}
-							{m.loading && (
-								<span className="inline-flex ml-1 animate-pulse">
-									...
-								</span>
-							)}
-						</motion.div>
-					))}
-				</AnimatePresence>
-				<div ref={bottomRef} />
-			</div>
-
-			<form
-				onSubmit={submit}
-				className="border-t border-surface flex items-center gap-3 p-4 bg-surface/80 backdrop-blur"
+		<Box
+			display="flex"
+			flexDirection="column"
+			height="100%"
+			bgcolor="transparent"
+		>
+			<MessageList messages={messages} />
+			<Box
+				component="form"
+				onSubmit={handleSubmit}
+				display="flex"
+				alignItems="center"
+				gap={1.5}
+				p={2}
+				borderTop={1}
+				borderColor="var(--background-modifier-border)"
+				bgcolor="transparent"
 			>
-				<input
-					className="flex-1 bg-transparent border border-surface rounded-lg px-3 py-2 outline-none focus:border-primary"
+				<TextField
+					fullWidth
+					size="small"
 					placeholder="Ask me anything…"
+					variant="outlined"
 					value={input}
 					onChange={(e) => setInput(e.target.value)}
+					slotProps={{
+						input: {
+							sx: { bgcolor: "var(--background-secondary)" },
+						},
+					}}
 				/>
-				<button
+				<IconButton
 					type="submit"
-					disabled={!input.trim()}
-					className="grid place-items-center rounded-lg bg-primary text-white w-10 h-10 disabled:opacity-40"
+					color="primary"
+					disabled={isLoading || input.trim() === ""}
+					sx={{ width: 40, height: 40 }}
 				>
-					{messages.at(-1)?.loading ? (
-						<Loader2 className="animate-spin w-5 h-5" />
-					) : (
-						<Send className="w-5 h-5" />
-					)}
-				</button>
-			</form>
-		</div>
+					{isLoading ? <CircularProgress size={20} /> : <SendIcon />}
+				</IconButton>
+			</Box>
+		</Box>
 	);
 };

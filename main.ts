@@ -1,14 +1,16 @@
-import { Plugin } from "obsidian";
-import { ChatView, VIEW_TYPE_CHAT } from "./src/components/ChatView.js";
-import { RagManager } from "src/search/chat.js";
+import "./styles.css";
+import { ItemView, Plugin, WorkspaceLeaf } from "obsidian";
+import { ChatService } from "src/search/chatService.js";
 import { VaultFile } from "src/utils/VaultFile.js";
 import { corslessFetch } from "src/utils/corslessFetcher.js";
-import "./styles.css";
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { ChatApp } from "src/components/Chat.js";
 
 globalThis.fetch = corslessFetch;
 
 export default class MyPlugin extends Plugin {
-	private chat!: RagManager;
+	private chat!: ChatService;
 
 	async onload() {
 		this.registerView(
@@ -17,7 +19,7 @@ export default class MyPlugin extends Plugin {
 		);
 
 		const file = new VaultFile(this.app);
-		this.chat = await RagManager.create({
+		this.chat = await ChatService.create({
 			file,
 			dirPath: "test",
 			numOfShards: 1,
@@ -54,5 +56,33 @@ export default class MyPlugin extends Plugin {
 		this.app.workspace
 			.getLeavesOfType(VIEW_TYPE_CHAT)
 			.forEach((l) => l.detach());
+	}
+}
+
+const VIEW_TYPE_CHAT = "rag-chat-react";
+
+export class ChatView extends ItemView {
+	private root?: ReactDOM.Root;
+
+	constructor(leaf: WorkspaceLeaf, private chat: ChatService) {
+		super(leaf);
+	}
+	getViewType() {
+		return VIEW_TYPE_CHAT;
+	}
+	getDisplayText() {
+		return "RAG Chat (React)";
+	}
+
+	async onOpen() {
+		const container = this.containerEl.children[1];
+		container.empty();
+
+		this.root = ReactDOM.createRoot(container);
+		this.root.render(React.createElement(ChatApp, { chat: this.chat }));
+	}
+
+	async onClose() {
+		this.root?.unmount();
 	}
 }
