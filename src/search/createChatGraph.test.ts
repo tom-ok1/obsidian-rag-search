@@ -1,10 +1,14 @@
-import { describe, it, expect, beforeEach, vi, type Mock } from "vitest";
-import { createChatGraph } from "./createChatGraph.js";
+import {
+	createChatGraph,
+	type ChatMsg,
+	MAX_RETRIES,
+} from "./createChatGraph.js";
 import { Document } from "@langchain/core/documents";
 import type { VectorStore } from "@langchain/core/vectorstores";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { AIMessageChunk } from "@langchain/core/messages";
 import { IterableReadableStream } from "@langchain/core/utils/stream";
+import { Mock } from "vitest";
 
 const makeDocs = (n: number, prefix = "doc") =>
 	Array.from(
@@ -24,29 +28,42 @@ function mockVectorStore(docs: Document[]) {
 	} as unknown as VectorStore;
 }
 
+function chunkStream(
+	text = "Mock assistant response"
+): ReadableStream<AIMessageChunk> {
+	return new ReadableStream<AIMessageChunk>({
+		start(c) {
+			c.enqueue({ content: text } as AIMessageChunk);
+			c.close();
+		},
+	});
+}
+
 function mockChatModel() {
 	const analyse = vi.fn();
 	const evaluate = vi.fn();
+	const stream = vi.fn(
+		async () =>
+			chunkStream() as unknown as IterableReadableStream<AIMessageChunk>
+	);
 
 	const instance: Partial<BaseChatModel> = {
-		withStructuredOutput: ((_schema: any, _config?: any) => {
+		withStructuredOutput: ((schema: any) => {
+			const isSearch = "query" in (schema.shape ?? {});
 			return {
-				invoke: vi.fn(async (input: any) => {
-					if (typeof input === "string") return analyse(input);
-					return evaluate(input);
-				}),
+				invoke: vi.fn(async (input: any) =>
+					isSearch ? analyse(input) : evaluate(input)
+				),
 			};
 		}) as unknown as BaseChatModel["withStructuredOutput"],
 
-		stream: vi.fn(
-			async (_input: any) =>
-				"dummy" as unknown as IterableReadableStream<AIMessageChunk>
-		),
+		stream,
 	};
 	return {
 		instance: instance as BaseChatModel,
 		analyse,
 		evaluate,
+		stream,
 	};
 }
 
@@ -70,7 +87,10 @@ describe("createChatGraph", () => {
 
 	it("returns answer with initial context", async () => {
 		const graph = createChatGraph(store, cm.instance);
-		const res = await graph.invoke({ question: "What is foo?" });
+		const res = await graph.invoke({
+			question: "What is foo?",
+			history: [],
+		});
 
 		expect(res.context).toEqual(initialDocs.slice(0, 2));
 		expect(cm.analyse).toHaveBeenCalledTimes(1);
@@ -81,7 +101,10 @@ describe("createChatGraph", () => {
 	it("skips extra retrieval when context is enough", async () => {
 		cm.evaluate.mockResolvedValueOnce({ isEnough: true });
 		const graph = createChatGraph(store, cm.instance);
-		await graph.invoke({ question: "bar?" });
+		await graph.invoke({
+			question: "bar?",
+			history: [],
+		});
 
 		// similaritySearch is called only once
 		expect((store.similaritySearch as Mock).mock.calls).toHaveLength(1);
@@ -97,10 +120,15 @@ describe("createChatGraph", () => {
 			},
 		});
 		const graph = createChatGraph(store, cm.instance);
-		await graph.invoke({ question: "foo?" });
-		expect(cm.evaluate).toHaveBeenCalledTimes(3);
+		await graph.invoke({
+			question: "foo?",
+			history: [],
+		});
+		expect(cm.evaluate).toHaveBeenCalledTimes(MAX_RETRIES);
 		expect(cm.instance.stream).toHaveBeenCalledTimes(1);
-		expect((store.similaritySearch as Mock).mock.calls).toHaveLength(4);
+		expect((store.similaritySearch as Mock).mock.calls).toHaveLength(
+			MAX_RETRIES + 1
+		);
 	});
 
 	it("performs an additional search when context is insufficient", async () => {
@@ -125,10 +153,60 @@ describe("createChatGraph", () => {
 		);
 
 		const graph = createChatGraph(store, cm.instance);
-		const res = await graph.invoke({ question: "baz?" });
+		const res = await graph.invoke({
+			question: "baz?",
+			history: [],
+		});
 
 		expect((store.similaritySearch as Mock).mock.calls).toHaveLength(2);
 		expect(res.context).toEqual(extraDocs.slice(0, 3));
 		expect(cm.instance.stream).toHaveBeenCalledTimes(1);
+	});
+
+	it("retries when LLM returns un‑structured output first and succeeds on second try", async () => {
+		cm.analyse
+			.mockRejectedValueOnce(new Error("Invalid JSON"))
+			.mockResolvedValueOnce({
+				query: "q",
+				searchType: "similarity",
+				k: 2,
+			});
+
+		cm.evaluate.mockResolvedValueOnce({ isEnough: true });
+
+		const graph = createChatGraph(store, cm.instance);
+		const res = await graph.invoke({
+			question: "broken json?",
+			history: [],
+		});
+
+		expect(cm.analyse).toHaveBeenCalledTimes(2);
+		expect(res.context).toEqual(initialDocs.slice(0, 2));
+		expect(cm.instance.stream).toHaveBeenCalledTimes(1);
+	});
+
+	it("add chat history to the context", async () => {
+		const initialHistory: ChatMsg[] = [
+			{ role: "user", content: "Who is Einstein?" },
+			{
+				role: "assistant",
+				content: "Albert Einstein was a theoretical physicist.",
+			},
+		];
+
+		const graph = createChatGraph(store, cm.instance);
+		const res = await graph.invoke({
+			question: "What did he discover?",
+			history: initialHistory,
+		});
+
+		// Check that history was formatted properly and passed to the model
+		const expectedFormattedHistory =
+			"user: Who is Einstein?\nassistant: Albert Einstein was a theoretical physicist.";
+		const promptCallArg = (cm.stream as Mock).mock.calls[0][0];
+		expect(promptCallArg.toString()).toContain(expectedFormattedHistory);
+
+		// Verify history was updated correctly
+		expect(res.history).toEqual([...initialHistory]);
 	});
 });

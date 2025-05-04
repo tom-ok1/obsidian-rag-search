@@ -3,13 +3,15 @@ import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { z } from "zod";
 import { Annotation, StateGraph } from "@langchain/langgraph";
 import { Document } from "@langchain/core/documents";
-import { pull } from "langchain/hub";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { MdDocMetadata } from "./markdownProcessor.js";
 import { IterableReadableStream } from "@langchain/core/utils/stream";
 import { AIMessageChunk } from "@langchain/core/messages";
+import { BaseLanguageModelInput } from "@langchain/core/language_models/base";
 
-const MAX_RETRIES = 3;
+export type ChatMsg = { role: "user" | "assistant"; content: string };
+
+export const MAX_RETRIES = 3;
 
 export function createChatGraph(
 	vectorStore: VectorStore,
@@ -32,7 +34,7 @@ export function createChatGraph(
 			.number()
 			.min(1)
 			.max(40)
-			.default(4)
+			.default(20)
 			.describe("Number of documents to return (1–40)."),
 		fetchK: z
 			.number()
@@ -73,18 +75,40 @@ export function createChatGraph(
 		context: Annotation<Document<MdDocMetadata>[]>,
 		answer: Annotation<{
 			stream: IterableReadableStream<AIMessageChunk>;
+			historyStream: IterableReadableStream<AIMessageChunk>;
 		}>,
+		history: Annotation<ChatMsg[]>,
 		isEnough: Annotation<boolean>,
 	});
 
 	const inputStateAnnotation = Annotation.Root({
 		question: Annotation<string>,
+		history: Annotation<ChatMsg[]>,
 	});
 
 	// 2. Define workflow functions
 	async function analyzeQuery(state: typeof inputStateAnnotation.State) {
-		const structuredLlm = model.withStructuredOutput(searchSchema);
-		const result = await structuredLlm.invoke(state.question);
+		const analyzePrompt = ChatPromptTemplate.fromMessages([
+			[
+				"system",
+				"Extract an optimal vector search query. Respond ONLY JSON.",
+			],
+			[
+				"user",
+				[
+					"### Conversation so far\n",
+					"{history}\n\n",
+					"### Latest question\n",
+					"{question}",
+				].join(""),
+			],
+		]);
+		const messages = await analyzePrompt.invoke(state);
+		const result = await callWithStructuredOutput(
+			model,
+			searchSchema,
+			messages
+		);
 		return { search: result };
 	}
 
@@ -142,7 +166,6 @@ export function createChatGraph(
 				].join(""),
 			],
 		]);
-		const structuredLlm = model.withStructuredOutput(evalSchema);
 		const docText = state.context.map((d) => d.pageContent).join("\n\n");
 		const messages = await evalPrompt.invoke({
 			query: state.question,
@@ -150,7 +173,11 @@ export function createChatGraph(
 			search: state.search,
 		});
 
-		const result = await structuredLlm.invoke(messages);
+		const result = await callWithStructuredOutput(
+			model,
+			evalSchema,
+			messages
+		);
 		return result.isEnough
 			? { isEnough: true }
 			: { isEnough: false, search: result.nextParams };
@@ -160,13 +187,31 @@ export function createChatGraph(
 		const docsContent = state.context
 			.map((doc) => doc.pageContent)
 			.join("\n");
-		const promptTemplate = await pull<ChatPromptTemplate>("rlm/rag-prompt");
-
-		const messages = await promptTemplate.invoke({
+		const ragPrompt = ChatPromptTemplate.fromMessages([
+			[
+				"system",
+				"You are a helpful assistant. Please answer the question with the same language as the question." +
+					"If the context is enough, answer the question based on the context." +
+					"If the context is not enough, apologize and ask the user for changing the question.",
+			],
+			[
+				"user",
+				[
+					"### Conversation so far\n{history}\n\n",
+					"### Question\n{question}\n\n",
+					"### Context\n{context}",
+				].join(""),
+			],
+		]);
+		const messages = await ragPrompt.invoke({
 			question: state.question,
 			context: docsContent,
+			history: state.history
+				.map((msg) => `${msg.role}: ${msg.content}`)
+				.join("\n"),
 		});
 		const chunkResponse = await model.stream(messages);
+		// const [clientStream, historyStream] = chunkResponse.tee();
 		return {
 			answer: { stream: chunkResponse },
 		};
@@ -188,4 +233,31 @@ export function createChatGraph(
 		.compile();
 
 	return graph;
+}
+
+async function callWithStructuredOutput<T extends Record<string, any>>(
+	mdl: BaseChatModel,
+	schema: z.ZodSchema<T>,
+	input: BaseLanguageModelInput
+): Promise<T> {
+	const STRUCTURED_MAX_RETRIES = 3;
+	const structured = mdl.withStructuredOutput(schema);
+	let messages: BaseLanguageModelInput = structuredClone(input);
+	for (let i = 0; i < STRUCTURED_MAX_RETRIES; i++) {
+		try {
+			return await structured.invoke(messages);
+		} catch (err) {
+			if (i === STRUCTURED_MAX_RETRIES - 1) throw err;
+			// Force llm to retry with additional context
+			const res = ChatPromptTemplate.fromMessages([
+				[
+					"system",
+					"Your previous response was not valid JSON. Please try again.",
+				],
+				messages.toString(),
+			]);
+			messages = await res.invoke(messages);
+		}
+	}
+	throw new Error("Unreachable");
 }

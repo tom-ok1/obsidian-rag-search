@@ -1,10 +1,12 @@
 import { FileAdapter } from "src/utils/fileAdapter.js";
 import { OramaStore } from "./vectorStore.js";
-import { createChatGraph } from "./createChatGraph.js";
+import { ChatMsg, createChatGraph } from "./createChatGraph.js";
 import { MarkdownProcessor } from "./markdownProcessor.js";
 type ChatGraph = ReturnType<typeof createChatGraph>;
 
-export class RagManager {
+export class ChatService {
+	private history: ChatMsg[] = [];
+
 	private constructor(
 		private readonly chatGraph: ChatGraph,
 		private readonly vectorStore: OramaStore,
@@ -46,14 +48,28 @@ export class RagManager {
 		});
 		const markdownProcessor = new MarkdownProcessor(file);
 		const chatGraph = createChatGraph(vectorStore, model);
-		return new RagManager(chatGraph, vectorStore, markdownProcessor);
+		return new ChatService(chatGraph, vectorStore, markdownProcessor);
 	}
 
 	async search(question: string) {
 		const res = await this.chatGraph.invoke({
 			question,
+			history: this.history,
+		});
+		this.history.concat(res.history);
+		this.history.push({
+			role: "user",
+			content: question,
 		});
 		return { answer: res.answer, docs: res.context };
+	}
+
+	/**
+	 *  Add chat history from finished readable stream
+	 * @param history assistant's chat history
+	 */
+	async addChatHistory(history: ChatMsg) {
+		this.history.push(history);
 	}
 
 	async insert(filePaths: string[]) {
