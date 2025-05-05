@@ -208,7 +208,7 @@ export class OramaDb<T extends AnySchema> {
 					where: filter,
 					limit: fetchK,
 					offset: 0,
-					similarity: lambda,
+					similarity: lambda ?? 0.6,
 				});
 			})
 			.flatMap((result: Results<Schema<T>>) => result.hits)

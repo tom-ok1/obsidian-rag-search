@@ -2,7 +2,7 @@ import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { MD5 } from "crypto-js";
 import { FileAdapter } from "../utils/fileAdapter.js";
 
-const CHUNK_SIZE = 1000;
+const CHUNK_SIZE = 500;
 
 export type MdDocMetadata = {
 	title?: string;

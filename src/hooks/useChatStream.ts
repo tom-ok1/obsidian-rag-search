@@ -1,9 +1,8 @@
 import { useState, useCallback } from "react";
 import { ChatService } from "src/search/chatService.js";
+import { ChatMsg } from "src/search/createChatGraph.js";
 
-export type Msg = {
-	role: "user" | "assistant";
-	content: string;
+export type Msg = ChatMsg & {
 	loading?: boolean;
 };
 

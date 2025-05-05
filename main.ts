@@ -23,6 +23,7 @@ export default class MyPlugin extends Plugin {
 			file,
 			dirPath: "test",
 			numOfShards: 1,
+			language: "japanese",
 		});
 
 		this.addCommand({
@@ -37,10 +38,10 @@ export default class MyPlugin extends Plugin {
 		this.app.workspace.onLayoutReady(async () => {
 			// should be inserted after workspace is ready
 			// path should be relative to vault root
-			// await this.chat.insert([
-			// "Resources/Tech/Obsidian/Obsidian上でVimを実現している方法.md",
-			// "Resources/Tech/Obsidian/Obsidianにおけるnvim-treeライクなファイルエクスプローラー操作の実現可能性調査.md",
-			// ]);
+			await this.chat.insert([
+				"Resources/Tech/Obsidian/Obsidian上でVimを実現している方法.md",
+				"Resources/Tech/Obsidian/Obsidianにおけるnvim-treeライクなファイルエクスプローラー操作の実現可能性調査.md",
+			]);
 		});
 	}
 

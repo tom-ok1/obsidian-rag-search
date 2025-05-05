@@ -2,6 +2,7 @@ import { FileAdapter } from "src/utils/fileAdapter.js";
 import { OramaStore } from "./vectorStore.js";
 import { ChatMsg, createChatGraph } from "./createChatGraph.js";
 import { MarkdownProcessor } from "./markdownProcessor.js";
+
 type ChatGraph = ReturnType<typeof createChatGraph>;
 
 export class ChatService {
@@ -17,8 +18,9 @@ export class ChatService {
 		file: FileAdapter;
 		dirPath: string;
 		numOfShards: number;
+		language?: string;
 	}) {
-		const { file, dirPath, numOfShards } = params;
+		const { file, dirPath, numOfShards, language } = params;
 		const { ChatVertexAI, VertexAIEmbeddings } = await import(
 			"@langchain/google-vertexai"
 		);
@@ -45,6 +47,7 @@ export class ChatService {
 			dirPath,
 			numOfShards,
 			modelName: model._modelType(),
+			language,
 		});
 		const markdownProcessor = new MarkdownProcessor(file);
 		const chatGraph = createChatGraph(vectorStore, model);

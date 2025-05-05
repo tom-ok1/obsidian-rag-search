@@ -22,19 +22,19 @@ export function createChatGraph(
 		query: z
 			.string()
 			.describe(
-				"Search query: rewrite the user's natural-language request into a concise, keyword-focused query suitable for a vector database. Make sure to use the same language as the original question."
+				"Search query: rewrite the user's natural-language request into a concise, keyword-focused sentense suitable for a vector database. Make sure to use the same language as the original question."
 			),
 		searchType: z
 			.enum(["similarity", "mmr"])
 			.default("similarity")
 			.describe(
-				"Search mode: 'similarity' for basic similarity search, 'mmr' for Maximal Marginal Relevance search balancing relevance and diversity."
+				"Search mode: 'similarity' for basic similarity search, 'mmr' for more advanced search using max marginal relevance, which allows for more diverse results."
 			),
 		k: z
 			.number()
 			.min(1)
 			.max(40)
-			.default(20)
+			.default(15)
 			.describe("Number of documents to return (1–40)."),
 		fetchK: z
 			.number()
@@ -42,7 +42,7 @@ export function createChatGraph(
 			.max(100)
 			.optional()
 			.describe(
-				"For MMR: number of documents to fetch before re-ranking. Optional."
+				"For MMR: number of documents to fetch before re-ranking."
 			),
 		lambda: z
 			.number()
@@ -50,7 +50,7 @@ export function createChatGraph(
 			.max(1)
 			.optional()
 			.describe(
-				"For MMR: diversity parameter (0 = maximum diversity, 1 = minimum diversity). Optional. default is 0.8."
+				"For MMR: diversity parameter (0 = maximum diversity, 1 = minimum diversity). Optional. default is 0.6."
 			),
 	});
 
@@ -67,8 +67,6 @@ export function createChatGraph(
 			),
 	});
 
-	let attemptsCount = 0;
-
 	const stateAnnotation = Annotation.Root({
 		question: Annotation<string>,
 		search: Annotation<z.infer<typeof searchSchema>>,
@@ -81,17 +79,15 @@ export function createChatGraph(
 		isEnough: Annotation<boolean>,
 	});
 
-	const inputStateAnnotation = Annotation.Root({
-		question: Annotation<string>,
-		history: Annotation<ChatMsg[]>,
-	});
+	let attemptsCount = 0;
 
 	// 2. Define workflow functions
-	async function analyzeQuery(state: typeof inputStateAnnotation.State) {
+	async function analyzeQuery(state: typeof stateAnnotation.State) {
 		const analyzePrompt = ChatPromptTemplate.fromMessages([
 			[
 				"system",
-				"Extract an optimal vector search query. Respond ONLY JSON.",
+				"Extract an optimal vector search query. Respond ONLY JSON. " +
+					"Use the same language as the question.",
 			],
 			[
 				"user",
@@ -103,13 +99,18 @@ export function createChatGraph(
 				].join(""),
 			],
 		]);
-		const messages = await analyzePrompt.invoke(state);
-		const result = await callWithStructuredOutput(
-			model,
-			searchSchema,
-			messages
-		);
-		return { search: result };
+
+		const messages = await analyzePrompt.invoke({
+			question: state.question,
+			history: mapHistoryToText(state.history),
+		});
+		return {
+			search: await callWithStructuredOutput(
+				model,
+				searchSchema,
+				messages
+			),
+		};
 	}
 
 	async function retrieveData(state: typeof stateAnnotation.State) {
@@ -125,7 +126,7 @@ export function createChatGraph(
 				{
 					k: search.k,
 					fetchK: search.fetchK ?? search.k * 4,
-					lambda: search.lambda ?? 0.8,
+					lambda: search.lambda ?? 0.5,
 				},
 				undefined
 			);
@@ -191,7 +192,6 @@ export function createChatGraph(
 			[
 				"system",
 				"You are a helpful assistant. Please answer the question with the same language as the question." +
-					"If the context is enough, answer the question based on the context." +
 					"If the context is not enough, apologize and ask the user for changing the question.",
 			],
 			[
@@ -206,9 +206,7 @@ export function createChatGraph(
 		const messages = await ragPrompt.invoke({
 			question: state.question,
 			context: docsContent,
-			history: state.history
-				.map((msg) => `${msg.role}: ${msg.content}`)
-				.join("\n"),
+			history: mapHistoryToText(state.history),
 		});
 		const stream = await model.stream(messages);
 		return {
@@ -234,29 +232,42 @@ export function createChatGraph(
 	return graph;
 }
 
+/**
+ * Call the model with structured output and retry if the output is not valid JSON up to 3 times.
+ * @throws If the output is not valid JSON after 3 attempts.
+ */
 async function callWithStructuredOutput<T extends Record<string, any>>(
 	mdl: BaseChatModel,
 	schema: z.ZodSchema<T>,
 	input: BaseLanguageModelInput
 ): Promise<T> {
-	const STRUCTURED_MAX_RETRIES = 3;
 	const structured = mdl.withStructuredOutput(schema);
-	let messages: BaseLanguageModelInput = structuredClone(input);
-	for (let i = 0; i < STRUCTURED_MAX_RETRIES; i++) {
+	let prompt: BaseLanguageModelInput = input;
+
+	for (let i = 0; i < 3; i++) {
 		try {
-			return await structured.invoke(messages);
+			return await structured.invoke(prompt);
 		} catch (err) {
-			if (i === STRUCTURED_MAX_RETRIES - 1) throw err;
-			// Force llm to retry with additional context
-			const res = ChatPromptTemplate.fromMessages([
-				[
-					"system",
-					"Your previous response was not valid JSON. Please try again.",
-				],
-				messages.toString(),
-			]);
-			messages = await res.invoke(messages);
+			if (i === 2) throw err;
+
+			const additionalPrompt = {
+				role: "system",
+				content:
+					"Previous response was not valid JSON. Respond in valid JSON only.",
+			};
+
+			if (Array.isArray(prompt)) {
+				prompt = [additionalPrompt, ...prompt];
+			} else if (typeof prompt === "object") {
+				prompt = [additionalPrompt, ...prompt.toChatMessages()];
+			} else {
+				prompt = [additionalPrompt, prompt];
+			}
 		}
 	}
 	throw new Error("Unreachable");
+}
+
+function mapHistoryToText(history: ChatMsg[]): string {
+	return history.map((msg) => `${msg.role}: ${msg.content}`).join("\n");
 }
