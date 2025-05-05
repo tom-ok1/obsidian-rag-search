@@ -1,6 +1,6 @@
 import {
 	createChatGraph,
-	type ChatMsg,
+	type ChatMessage,
 	MAX_RETRIES,
 } from "./createChatGraph.js";
 import { Document } from "@langchain/core/documents";
@@ -186,7 +186,7 @@ describe("createChatGraph", () => {
 	});
 
 	it("add chat history to the context", async () => {
-		const initialHistory: ChatMsg[] = [
+		const initialHistory: ChatMessage[] = [
 			{ role: "user", content: "Who is Einstein?" },
 			{
 				role: "assistant",

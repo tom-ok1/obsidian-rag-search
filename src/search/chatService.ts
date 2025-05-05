@@ -1,12 +1,12 @@
 import { FileAdapter } from "src/utils/fileAdapter.js";
 import { OramaStore } from "./vectorStore.js";
-import { ChatMsg, createChatGraph } from "./createChatGraph.js";
+import { ChatMessage, createChatGraph } from "./createChatGraph.js";
 import { MarkdownProcessor } from "./markdownProcessor.js";
 
 type ChatGraph = ReturnType<typeof createChatGraph>;
 
 export class ChatService {
-	private history: ChatMsg[] = [];
+	private history: ChatMessage[] = [];
 
 	private constructor(
 		private readonly chatGraph: ChatGraph,
@@ -71,7 +71,7 @@ export class ChatService {
 	 *  Add chat history from finished readable stream
 	 * @param history assistant's chat history
 	 */
-	async addChatHistory(history: ChatMsg) {
+	async addChatHistory(history: ChatMessage) {
 		this.history.push(history);
 	}
 

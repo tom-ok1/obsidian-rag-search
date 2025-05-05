@@ -1,93 +1,97 @@
-import { useState, useCallback } from "react";
-import { ChatService } from "src/search/chatService.js";
-import { ChatMsg } from "src/search/createChatGraph.js";
+import { useState } from "react";
+import type { ChatService } from "../search/chatService.js";
+import { ChatContent } from "../types/messages.js";
 
-export type Msg = ChatMsg & {
-	loading?: boolean;
-};
+export type { ChatContent as Msg };
 
-export function useChatStream(chat: ChatService) {
-	const [messages, setMessages] = useState<Msg[]>([]);
+export function useChatStream(chatService: ChatService) {
+	const [messages, setMessages] = useState<ChatContent[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
-	const ask = useCallback(
-		async (question: string) => {
-			const trimmed = question.trim();
-			if (!trimmed || isLoading) return;
+	const ask = async (question: string) => {
+		if (!question.trim()) return;
 
-			setMessages((prev) => [
-				...prev,
-				{ role: "user", content: trimmed },
-			]);
-			// Add assistant bubble
-			setMessages((prev) => [
-				...prev,
-				{ role: "assistant", content: "", loading: true },
-			]);
-			setIsLoading(true);
+		setError(null);
+		setIsLoading(true);
 
-			try {
-				const {
-					answer: { stream },
-				} = await chat.search(trimmed);
-				const reader = stream.getReader();
-				let buf = "";
-				let firstChunk = true;
+		// Create user message with timestamp as id
+		const userMsg: ChatContent = {
+			id: Date.now().toString(),
+			role: "user",
+			content: question,
+			createdAt: Date.now(),
+		};
 
-				while (true) {
-					const { done, value } = await reader.read();
-					if (done) {
-						await chat.addChatHistory({
-							role: "assistant",
-							content: buf,
-						});
-						break;
-					}
+		// Create initial assistant message (will be streamed)
+		const assistantMsg: ChatContent = {
+			id: (Date.now() + 1).toString(),
+			role: "assistant",
+			content: "",
+			createdAt: Date.now(),
+			loading: true,
+		};
 
-					buf += extractText(value?.content ?? value);
-					setMessages((prev) =>
-						prev.map((m, i) =>
-							i === prev.length - 1 && m.role === "assistant"
-								? {
-										...m,
-										content: buf,
-										loading: firstChunk ? false : m.loading,
-								  }
-								: m
-						)
-					);
-					firstChunk = false;
-				}
-			} catch (err) {
-				console.error("Chat error", err);
-				setMessages((prev) => [
-					...prev.slice(0, -1),
-					{
-						role: "assistant",
-						content: "⚠️ Something went wrong. Please try again.",
-						loading: false,
-					},
-				]);
-			} finally {
-				setIsLoading(false);
+		// Add both messages
+		setMessages((prev) => [...prev, userMsg, assistantMsg]);
+
+		try {
+			const {
+				answer: { stream },
+			} = await chatService.search(question);
+
+			for await (const chunk of stream) {
+				const { content } = chunk;
+				if (Array.isArray(content)) return;
+
+				setMessages((prev) => {
+					const newMessages = [...prev];
+					const assistantMsgIndex = newMessages.length - 1;
+					newMessages[assistantMsgIndex] = {
+						...newMessages[assistantMsgIndex],
+						content:
+							newMessages[assistantMsgIndex].content + content,
+					};
+
+					return newMessages;
+				});
 			}
-		},
-		[chat, isLoading]
-	);
 
-	return { messages, isLoading, ask };
-}
+			// Mark streaming as complete
+			setMessages((prev) => {
+				const newMessages = [...prev];
+				const assistantMsgIndex = newMessages.length - 1;
 
-function extractText(node: any): string {
-	if (node == null) return "";
-	if (typeof node === "string") return node;
-	if (Array.isArray(node)) return node.map(extractText).join("");
-	if (typeof node === "object") {
-		if ("text" in node) return extractText(node.text);
-		if ("content" in node) return extractText(node.content);
-		return Object.values(node as Record<string, unknown>)
-			.map(extractText)
-			.join("");
-	}
-	return String(node);
+				newMessages[assistantMsgIndex] = {
+					...newMessages[assistantMsgIndex],
+					loading: false,
+				};
+				return newMessages;
+			});
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : "Failed to get response"
+			);
+
+			setMessages((prev) => {
+				const newMessages = [...prev];
+				const assistantMsgIndex = newMessages.length - 1;
+
+				newMessages[assistantMsgIndex] = {
+					...newMessages[assistantMsgIndex],
+					loading: false,
+					error:
+						err instanceof Error
+							? err.message
+							: "An error occurred",
+				};
+
+				return newMessages;
+			});
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	return { messages, isLoading, ask, error };
 }

@@ -9,7 +9,7 @@ import { IterableReadableStream } from "@langchain/core/utils/stream";
 import { AIMessageChunk } from "@langchain/core/messages";
 import { BaseLanguageModelInput } from "@langchain/core/language_models/base";
 
-export type ChatMsg = { role: "user" | "assistant"; content: string };
+export type ChatMessage = { role: "user" | "assistant"; content: string };
 
 export const MAX_RETRIES = 3;
 
@@ -75,7 +75,7 @@ export function createChatGraph(
 			stream: IterableReadableStream<AIMessageChunk>;
 			historyStream: IterableReadableStream<AIMessageChunk>;
 		}>,
-		history: Annotation<ChatMsg[]>,
+		history: Annotation<ChatMessage[]>,
 		isEnough: Annotation<boolean>,
 	});
 
@@ -268,6 +268,6 @@ async function callWithStructuredOutput<T extends Record<string, any>>(
 	throw new Error("Unreachable");
 }
 
-function mapHistoryToText(history: ChatMsg[]): string {
+function mapHistoryToText(history: ChatMessage[]): string {
 	return history.map((msg) => `${msg.role}: ${msg.content}`).join("\n");
 }
