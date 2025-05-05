@@ -1,8 +1,9 @@
-import { MarkDownDoc, OramaStore } from "./vectorStore.js";
+import { MarkDownDoc, MdDocRawSchema, OramaStore } from "./vectorStore.js";
 import { Embeddings } from "@langchain/core/embeddings";
 import * as fs from "fs";
 import * as path from "path";
-import { create, save } from "@orama/orama";
+import { create, count } from "@orama/orama";
+import { persist, restore } from "@orama/plugin-data-persistence";
 import { localFile } from "../utils/LocalFile.js";
 import { storeFilename } from "./oramaDb.js";
 
@@ -33,12 +34,11 @@ async function createMockDb(embeddingDimensions: number) {
 			content: "string",
 			embedding: `vector[${embeddingDimensions}]`,
 			embeddingModel: "string",
-			created_at: "number",
 			ctime: "number",
 			mtime: "number",
 			tags: "string[]",
 			extension: "string",
-		},
+		} satisfies MdDocRawSchema,
 	});
 }
 
@@ -53,32 +53,26 @@ describe("OramaStore", () => {
 	});
 
 	describe("create", () => {
-		it("should load a db from a JSON file", async () => {
+		it("should load a db from a binary file", async () => {
 			const mockEmbeddingDimensions = 128;
 			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
 
 			const mockOramaDb = await createMockDb(mockEmbeddingDimensions);
-			const rawdata = await save(mockOramaDb);
-			const jsonData = JSON.stringify(
-				{ ...rawdata, schema: mockOramaDb.schema },
-				null,
-				2
-			);
+			const binaryData = await persist(mockOramaDb, "binary");
+
 			fs.mkdirSync(testDbPath);
-			fs.writeFileSync(testDbFilePath(1), jsonData);
+			fs.writeFileSync(testDbFilePath(1), binaryData, "binary");
 			expect(fs.existsSync(testDbFilePath(1))).toBe(true);
 
-			await OramaStore.create(mockEmbeddings, {
+			const store = await OramaStore.create(mockEmbeddings, {
 				dirPath: testDbPath,
 				numOfShards: 1,
 				file,
 			});
 
-			const dbContent = JSON.parse(
-				fs.readFileSync(testDbFilePath(1), "utf-8")
-			);
-			expect(dbContent.docs).toBeDefined();
-			expect(dbContent.schema).toEqual(mockOramaDb.schema);
+			const loadedDb = (store as any).db;
+			expect(loadedDb).toBeDefined();
+			expect(loadedDb.shards[0].schema).toEqual(mockOramaDb.schema);
 		});
 
 		it("should create a new db", async () => {
@@ -94,11 +88,13 @@ describe("OramaStore", () => {
 			expect(store).toBeDefined();
 			expect(fs.existsSync(testDbPath)).toBe(true);
 
-			const dbContent = JSON.parse(
-				fs.readFileSync(testDbFilePath(1), "utf-8")
+			// Verify by loading the database directly
+			const loadedDb = await restore(
+				"binary",
+				fs.readFileSync(testDbFilePath(1))
 			);
-
-			expect(dbContent.docs).toBeDefined();
+			expect(loadedDb).toBeDefined();
+			expect(loadedDb.schema).toBeDefined();
 		});
 
 		it("should create *n* shard files", async () => {
@@ -159,8 +155,13 @@ describe("OramaStore", () => {
 			expect(docIds).toBeDefined();
 			expect(docIds).toHaveLength(2);
 
-			const db = JSON.parse(fs.readFileSync(testDbFilePath(1), "utf-8"));
-			expect(db.docs.count).toBe(2);
+			// Verify by loading the database and counting docs
+			const loadedDb = await restore(
+				"binary",
+				fs.readFileSync(testDbFilePath(1))
+			);
+			// Verify documents were added by checking count
+			expect(await count(loadedDb)).toBe(2);
 		});
 	});
 
@@ -215,9 +216,13 @@ describe("OramaStore", () => {
 			expect(docIds).toContain("vec1");
 			expect(docIds).toContain("vec2");
 
-			// Verify the vectors were added to the database
-			const db = JSON.parse(fs.readFileSync(testDbFilePath(1), "utf-8"));
-			expect(db.docs.count).toBe(2);
+			// Verify by loading the database and counting docs
+			const loadedDb = await restore(
+				"binary",
+				fs.readFileSync(testDbFilePath(1))
+			);
+			// Verify documents were added by checking count
+			expect(await count(loadedDb)).toBe(2);
 		});
 
 		it("should throw a validation error when adding vectors with incorrect dimensions", async () => {

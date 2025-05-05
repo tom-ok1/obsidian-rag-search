@@ -35,6 +35,9 @@ importers:
       '@orama/orama':
         specifier: ^3.1.6
         version: 3.1.6
+      '@orama/plugin-data-persistence':
+        specifier: ^3.1.6
+        version: 3.1.6
       '@orama/stopwords':
         specifier: ^3.1.6
         version: 3.1.6
@@ -962,6 +965,10 @@ packages:
   '@marijn/find-cluster-break@1.0.2':
     resolution: {integrity: sha512-l0h88YhZFyKdXIFNfSWpyjStDjGHwZ/U7iobcK1cQQD8sejsONdQtTVU+1wVN1PBw40PiiHB1vA5S7VTfQiP9g==}
 
+  '@msgpack/msgpack@2.8.0':
+    resolution: {integrity: sha512-h9u4u/jiIRKbq25PM+zymTyW6bhTzELvOoUd+AvYriWOAKpLGnIamaET3pnHYoI5iYphAHBI4ayx0MehR+VVPQ==}
+    engines: {node: '>= 10'}
+
   '@mui/core-downloads-tracker@7.0.2':
     resolution: {integrity: sha512-TfeFU9TgN1N06hyb/pV/63FfO34nijZRMqgHk0TJ3gkl4Fbd+wZ73+ZtOd7jag6hMmzO9HSrBc6Vdn591nhkAg==}
 
@@ -1068,6 +1075,9 @@ packages:
   '@orama/orama@3.1.6':
     resolution: {integrity: sha512-qtSrqCqRU93SjEBedz987tvWao1YQSELjBhGkHYGVP7Dg0lBWP6d+uZEIt5gxTAYio/YWWlhivmRABvRfPLmnQ==}
     engines: {node: '>= 16.0.0'}
+
+  '@orama/plugin-data-persistence@3.1.6':
+    resolution: {integrity: sha512-6he5bwPZUzC7D7WSaLg3kdIRjk/DsedpnJQDPuiDBL+TYBD9heBVZx19C9aypys7vojFj+3t0brHhccoM0vReA==}
 
   '@orama/stopwords@3.1.6':
     resolution: {integrity: sha512-m25K03OR8/kfr63mr+SAQJIKSHY5K63kFvRwBovORc2LkrdQxjrSwDNuQUV40obII30mwL3Kv+KoBYYDQJ6FxA==}
@@ -1749,6 +1759,9 @@ packages:
   dotenv@16.5.0:
     resolution: {integrity: sha512-m/C+AwOAr9/W1UOIZUo232ejMNnJAJtYQjUbHoNTBNTJSvqzzDh7vnrei3o3r3m9blf6ZoDkvcw0VmozNRFJxg==}
     engines: {node: '>=12'}
+
+  dpack@0.6.22:
+    resolution: {integrity: sha512-WGPNlW2OAE7Bj0eODMpAHUcEqxrlg01e9OFZDxQodminIgC194/cRHT7K04Z1j7AUEWTeeplYGrIv/xRdwU9Hg==}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -3724,6 +3737,8 @@ snapshots:
 
   '@marijn/find-cluster-break@1.0.2': {}
 
+  '@msgpack/msgpack@2.8.0': {}
+
   '@mui/core-downloads-tracker@7.0.2': {}
 
   '@mui/icons-material@7.0.2(@mui/material@7.0.2(@emotion/react@11.14.0(@types/react@19.1.2)(react@19.1.0))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@19.1.2)(react@19.1.0))(@types/react@19.1.2)(react@19.1.0))(@types/react@19.1.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@types/react@19.1.2)(react@19.1.0)':
@@ -3824,6 +3839,12 @@ snapshots:
       fastq: 1.19.1
 
   '@orama/orama@3.1.6': {}
+
+  '@orama/plugin-data-persistence@3.1.6':
+    dependencies:
+      '@msgpack/msgpack': 2.8.0
+      '@orama/orama': 3.1.6
+      dpack: 0.6.22
 
   '@orama/stopwords@3.1.6': {}
 
@@ -4453,6 +4474,8 @@ snapshots:
 
   dotenv@16.5.0: {}
 
+  dpack@0.6.22: {}
+
   dunder-proto@1.0.1:
     dependencies:
       call-bind-apply-helpers: 1.0.2
@@ -4945,7 +4968,7 @@ snapshots:
       isstream: 0.1.2
       jsonwebtoken: 9.0.2
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.9.0(debug@4.4.0))
+      retry-axios: 2.6.0(axios@1.9.0)
       tough-cookie: 4.1.4
     transitivePeerDependencies:
       - supports-color
@@ -5463,7 +5486,7 @@ snapshots:
     dependencies:
       lowercase-keys: 2.0.0
 
-  retry-axios@2.6.0(axios@1.9.0(debug@4.4.0)):
+  retry-axios@2.6.0(axios@1.9.0):
     dependencies:
       axios: 1.9.0(debug@4.4.0)
 

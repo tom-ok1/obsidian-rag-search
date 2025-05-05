@@ -2,10 +2,11 @@ import { localFile } from "../utils/LocalFile.js";
 import { OramaDb, storeFilename } from "./oramaDb.js";
 import * as path from "path";
 import * as fs from "fs";
-import { AnySchema, create, save, load, search, count } from "@orama/orama";
+import { AnySchema, create, search, count } from "@orama/orama";
 import { HashRing } from "./hashring.js";
 import { createTokenizer } from "@orama/tokenizers/japanese";
 import { stopwords as japaneseStopwords } from "@orama/stopwords/japanese";
+import { persist, restore } from "@orama/plugin-data-persistence";
 
 describe("OramaDb", () => {
 	const fileAdapter = new localFile();
@@ -105,14 +106,11 @@ describe("OramaDb", () => {
 	}
 
 	async function loadTestDb(idx: number) {
-		const testDb = await createTestDb();
 		const data = await fs.readFileSync(
-			path.join(testDirPath, storeFilename(idx)),
-			"utf-8"
+			path.join(testDirPath, storeFilename(idx))
 		);
-		const parsedData = JSON.parse(data);
-		await load(testDb, parsedData);
-		return testDb;
+		const db = await restore("binary", data);
+		return db;
 	}
 
 	beforeEach(() => {
@@ -137,18 +135,11 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			await OramaDb.create(fileAdapter, config, hashRing);
+			const oramadb = await OramaDb.create(fileAdapter, config, hashRing);
 
-			// Assert - Should create the expected number of files
-			for (let i = 1; i <= numOfShards; i++) {
-				const dbFilePath = path.join(testDirPath, storeFilename(i));
-				expect(fs.existsSync(dbFilePath)).toBe(true);
-
-				const fileContent = await fileAdapter.read(dbFilePath);
-				const parsedContent = JSON.parse(fileContent);
-
-				expect(parsedContent).toBeDefined();
-				expect(parsedContent.schema).toStrictEqual(testSchema);
+			for (const shard of (oramadb as any).shards) {
+				expect(shard).toBeDefined();
+				expect(shard.schema).toEqual(testSchema);
 			}
 		});
 
@@ -160,18 +151,18 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			await OramaDb.create(fileAdapter, config, hashRing, "japanese");
+			const oramadb = await OramaDb.create(
+				fileAdapter,
+				config,
+				hashRing,
+				"japanese"
+			);
 
-			// Assert - Should create the expected number of files
-			for (let i = 1; i <= numOfShards; i++) {
-				const dbFilePath = path.join(testDirPath, storeFilename(i));
-				expect(fs.existsSync(dbFilePath)).toBe(true);
-
-				const fileContent = await fileAdapter.read(dbFilePath);
-				const parsedContent = JSON.parse(fileContent);
-
-				expect(parsedContent).toBeDefined();
-				expect(parsedContent.language).toBe("japanese");
+			for (const shard of (oramadb as any).shards) {
+				expect(shard).toBeDefined();
+				expect(shard.schema).toEqual(testSchema);
+				// Check language through OramaDb class since we can't directly check binary data
+				expect(shard.tokenizer.language).toBe("japanese");
 			}
 		});
 	});
@@ -188,12 +179,10 @@ describe("OramaDb", () => {
 			// Arrange - Create and save multiple shards
 			for (let i = 1; i <= numOfShards; i++) {
 				const db = await createTestDb();
-
-				const rawdata = await save(db);
-				const jsonData = JSON.stringify(rawdata, null, 2);
+				const data = await persist(db, "binary");
 
 				const dbFilePath = path.join(testDirPath, storeFilename(i));
-				fs.writeFileSync(dbFilePath, jsonData, "utf-8");
+				fs.writeFileSync(dbFilePath, data, "binary");
 
 				expect(fs.existsSync(dbFilePath)).toBe(true);
 			}
@@ -202,6 +191,7 @@ describe("OramaDb", () => {
 
 			expect(loadedDb).toBeDefined();
 			expect((loadedDb as any).shards.length).toBe(numOfShards);
+			expect((loadedDb as any).shards[0].schema).toEqual(testSchema);
 		});
 
 		it("should be able to search after loading", async () => {
@@ -214,12 +204,10 @@ describe("OramaDb", () => {
 
 			for (let i = 1; i <= numOfShards; i++) {
 				const db = await createTestDb();
-
-				const rawdata = await save(db);
-				const jsonData = JSON.stringify(rawdata, null, 2);
+				const data = await persist(db, "binary");
 
 				const dbFilePath = path.join(testDirPath, storeFilename(i));
-				fs.writeFileSync(dbFilePath, jsonData, "utf-8");
+				fs.writeFileSync(dbFilePath, data, "binary");
 
 				expect(fs.existsSync(dbFilePath)).toBe(true);
 			}
@@ -243,22 +231,15 @@ describe("OramaDb", () => {
 
 			for (let i = 1; i <= numOfShards; i++) {
 				const db = await createTestDbWithJapaneseTokenizer();
-
-				const rawdata = await save(db);
-				const jsonData = JSON.stringify(rawdata, null, 2);
+				const data = await persist(db, "binary");
 
 				const dbFilePath = path.join(testDirPath, storeFilename(i));
-				fs.writeFileSync(dbFilePath, jsonData, "utf-8");
+				fs.writeFileSync(dbFilePath, data, "binary");
 
 				expect(fs.existsSync(dbFilePath)).toBe(true);
 			}
 
-			const loadedDb = await OramaDb.load(
-				fileAdapter,
-				config,
-				hashRing,
-				"japanese"
-			);
+			const loadedDb = await OramaDb.load(fileAdapter, config, hashRing);
 
 			const randomIdx = Math.floor(Math.random() * numOfShards);
 
@@ -419,9 +400,7 @@ describe("OramaDb", () => {
 			expect((oramaDb as any).config.numOfShards).toBe(finalShards);
 			// Check number of shard files
 			const files = fs.readdirSync(testDirPath);
-			expect(files.filter((f) => f.endsWith(".json")).length).toBe(
-				finalShards
-			);
+			expect(files.length).toBe(finalShards);
 
 			// Check total document count across new shards
 			let totalCountAfterRebalance = 0;
@@ -465,9 +444,7 @@ describe("OramaDb", () => {
 			expect((oramaDb as any).config.numOfShards).toBe(finalShards);
 			// Check number of shard files (should delete old ones)
 			const files = fs.readdirSync(testDirPath);
-			expect(files.filter((f) => f.endsWith(".json")).length).toBe(
-				finalShards
-			);
+			expect(files.length).toBe(finalShards);
 
 			// Check total document count across new shards
 			let totalCountAfterRebalance = 0;

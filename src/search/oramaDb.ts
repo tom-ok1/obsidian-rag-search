@@ -1,9 +1,7 @@
 import { FileAdapter } from "../utils/fileAdapter.js";
 import {
 	create,
-	load,
 	Orama,
-	save,
 	AnySchema,
 	PartialSchemaDeep,
 	TypedDocument,
@@ -22,6 +20,7 @@ import { HashRing } from "./hashring.js";
 import { createTokenizer } from "@orama/tokenizers/japanese";
 import { stopwords as japaneseStopwords } from "@orama/stopwords/japanese";
 import { MaxMarginalRelevanceSearchOptions } from "@langchain/core/vectorstores";
+import { persist, restore } from "@orama/plugin-data-persistence";
 
 /**
  * OramaDbConfig defines the configuration for a partitioned Orama database
@@ -55,18 +54,12 @@ export class OramaDb<T extends AnySchema> {
 	}
 
 	private async saveShard(db: Orama<T>, shardIndex: number) {
-		const rawdata = save(db);
-
-		const jsonData = JSON.stringify(
-			{ ...rawdata, schema: db.schema },
-			null,
-			2
-		);
+		const data = await persist(db, "binary");
 
 		await this.fileAdapter.write(
 			storeFilename(shardIndex + 1),
 			this.config.dirPath,
-			jsonData
+			String(data)
 		);
 	}
 
@@ -94,8 +87,7 @@ export class OramaDb<T extends AnySchema> {
 	static async load<T extends AnySchema>(
 		fileAdapter: FileAdapter,
 		config: OramaDbConfig<T>,
-		hashRing: HashRing,
-		language = "english"
+		hashRing: HashRing
 	) {
 		const oramaDb = new OramaDb(fileAdapter, config, hashRing);
 
@@ -108,14 +100,9 @@ export class OramaDb<T extends AnySchema> {
 				continue;
 			}
 
-			const rawdata = await fileAdapter.read(filePath);
-			const parsedData = JSON.parse(rawdata);
-
-			const db =
-				language === "japanese"
-					? oramaDb.createWithTokenizer(config.schema)
-					: create({ schema: config.schema, language });
-			load(db, parsedData);
+			const data = await fileAdapter.read(filePath);
+			const db = await restore<Orama<T>>("binary", data);
+			db.schema = config.schema;
 
 			oramaDb.shards.push(db);
 			oramaDb.hashRing.addNode(oramaDb.nodeName(i));

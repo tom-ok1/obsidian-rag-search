@@ -15,7 +15,7 @@ import { HashRing } from "./hashring.js";
 import { MdDocMetadata } from "src/search/markdownProcessor.js";
 import { Callbacks } from "@langchain/core/callbacks/manager";
 
-type MdDocRawSchema = Awaited<ReturnType<OramaStore["documentSchema"]>>;
+export type MdDocRawSchema = Awaited<ReturnType<OramaStore["documentSchema"]>>;
 type MdDocInterface = DocumentInterface<Partial<Schema<MdDocRawSchema>>>;
 
 export class MarkDownDoc extends Document<MdDocMetadata> {
@@ -65,8 +65,7 @@ export class OramaStore extends VectorStore {
 					numOfShards,
 					schema,
 				},
-				new HashRing(),
-				language
+				new HashRing()
 			);
 		} else {
 			store.db = await OramaDb.create(
