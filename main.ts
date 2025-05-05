@@ -19,7 +19,7 @@ globalThis.fetch = corslessFetch;
 
 export default class MyPlugin extends Plugin {
 	private chat!: ChatService;
-	private diffFilePaths: string[] = [];
+	private readonly STORAGE_KEY = "rag-search-fileMtimeMap";
 
 	async onload() {
 		this.registerView(
@@ -41,30 +41,48 @@ export default class MyPlugin extends Plugin {
 			name: "Open RAG Chat (React)",
 			callback: () => this.openChatView(),
 		});
-		this.addCommand({
-			id: "rag-chat-react-search",
-			name: "insert documents",
-			callback: async () => {
-				await this.chat.insert(this.diffFilePaths);
-				console.log(`${this.diffFilePaths} inserted`);
-			},
-		});
 
 		this.addRibbonIcon("message-square", "RAG Chat (React)", () =>
 			this.openChatView()
 		);
 
 		this.app.workspace.onLayoutReady(async () => {
-			// should be inserted after workspace is ready
-			// path should be relative to vault root
-
-			const files: TFile[] = this.app.vault.getFiles();
-			// const t = after.getTime();
-
-			this.diffFilePaths = files
-				// .filter((f) => f.stat.mtime > t)
-				.map(({ path }) => path);
+			// Files are available after the layout is ready
+			this.addCommand({
+				id: "rag-chat-react-search",
+				name: "insert documents",
+				callback: this.insertDocuments.bind(this),
+			});
 		});
+	}
+
+	private async insertDocuments() {
+		const files: TFile[] = this.app.vault.getFiles();
+		const rawData = window.localStorage.getItem(this.STORAGE_KEY);
+		const fileMtimeMap: Record<string, number | undefined> = rawData
+			? JSON.parse(rawData)
+			: {};
+		const updatedFiles = files
+			.filter((f) => {
+				const lastInsertedMtime = fileMtimeMap[f.path];
+				if (!lastInsertedMtime) return true;
+				return f.stat.mtime > Number(lastInsertedMtime);
+			})
+			.map(({ path }) => path);
+
+		await this.chat.insert(updatedFiles);
+
+		const updatedFilesMtime = files.reduce(
+			(acc, f) => ({
+				...acc,
+				[f.path]: f.stat.mtime,
+			}),
+			{} as Record<string, number>
+		);
+		window.localStorage.setItem(
+			this.STORAGE_KEY,
+			JSON.stringify(updatedFilesMtime)
+		);
 	}
 
 	openChatView() {
