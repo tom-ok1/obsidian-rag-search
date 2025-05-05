@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ChatService } from "../search/chatService.js";
 import { ChatContent } from "../types/messages.js";
+import { MessageContent } from "@langchain/core/messages";
 
 export type { ChatContent as Msg };
 
@@ -42,7 +43,6 @@ export function useChatStream(chatService: ChatService) {
 
 			for await (const chunk of stream) {
 				const { content } = chunk;
-				if (Array.isArray(content)) return;
 
 				setMessages((prev) => {
 					const newMessages = [...prev];
@@ -50,7 +50,8 @@ export function useChatStream(chatService: ChatService) {
 					newMessages[assistantMsgIndex] = {
 						...newMessages[assistantMsgIndex],
 						content:
-							newMessages[assistantMsgIndex].content + content,
+							newMessages[assistantMsgIndex].content +
+							formatChatContent(content),
 					};
 
 					return newMessages;
@@ -94,4 +95,20 @@ export function useChatStream(chatService: ChatService) {
 	};
 
 	return { messages, isLoading, ask, error };
+}
+
+function formatChatContent(content: MessageContent) {
+	if (!Array.isArray(content)) return content;
+
+	return content
+		.map((c) => {
+			if (typeof c === "string") {
+				return c;
+			} else if (c.type === "text") {
+				return c.text;
+			} else {
+				return "";
+			}
+		})
+		.join("");
 }

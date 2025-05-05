@@ -34,7 +34,7 @@ interface OramaDbConfig<T extends AnySchema> {
 	schema: T;
 }
 
-export const storeFilename = (id: number) => `vectorstore-${id}.json`;
+export const storeFilename = (id: number) => `vectorstore-${id}`;
 
 /**
  * OramaDb manages partitioned Orama databases
