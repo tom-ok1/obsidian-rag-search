@@ -395,7 +395,7 @@ describe("OramaDb", () => {
 				localHashRing
 			);
 			await oramaDb.saveMany(documents);
-			await oramaDb.rebalance(finalShards, allIds);
+			await oramaDb.rebalance(finalShards);
 
 			expect((oramaDb as any).config.numOfShards).toBe(finalShards);
 			// Check number of shard files
@@ -439,7 +439,7 @@ describe("OramaDb", () => {
 				localHashRing
 			);
 			await oramaDb.saveMany(documents);
-			await oramaDb.rebalance(finalShards, allIds);
+			await oramaDb.rebalance(finalShards);
 
 			expect((oramaDb as any).config.numOfShards).toBe(finalShards);
 			// Check number of shard files (should delete old ones)
@@ -485,7 +485,7 @@ describe("OramaDb", () => {
 			// Spy on saveShard to ensure it's not called unnecessarily
 			const saveShardSpy = vi.spyOn(oramaDb as any, "saveShard");
 
-			await oramaDb.rebalance(initialShards, allIds);
+			await oramaDb.rebalance(initialShards);
 
 			expect((oramaDb as any).config.numOfShards).toBe(initialShards);
 			expect(saveShardSpy).not.toHaveBeenCalled(); // Should not save if no changes

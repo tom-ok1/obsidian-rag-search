@@ -203,8 +203,14 @@ export class OramaDb<T extends AnySchema> {
 			.slice(0, k);
 	}
 
-	async rebalance(newNumShards: number, allIds: string[]): Promise<void> {
+	async rebalance(newNumShards: number): Promise<void> {
 		if (newNumShards === this.config.numOfShards) return;
+		const allIds = this.shards
+			.map(
+				(db) => db.data.docs.sharedInternalDocumentStore.internalIdToId
+			)
+			.flat()
+			.filter((id) => id !== undefined);
 
 		// create a new hash ring
 		const newRing = new HashRing<string>({
