@@ -18,9 +18,7 @@ export class MarkdownProcessor {
 
 	async readMarkdownFile(filePath: string) {
 		const extension = await this.file.extname(filePath);
-		if (extension !== "md") {
-			throw new Error("Not a markdown file");
-		}
+		if (extension !== "md") return;
 		return await this.file.read(filePath);
 	}
 
