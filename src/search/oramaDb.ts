@@ -128,7 +128,7 @@ export class OramaDb<T extends AnySchema> {
 		return results.sort((a, b) => b.score - a.score).slice(0, k);
 	}
 
-	async rebalance(newNumShards: number): Promise<void> {
-		await this.shardMgr.rebalance(newNumShards);
+	async rebalance(): Promise<void> {
+		await this.shardMgr.autoRebalance();
 	}
 }
