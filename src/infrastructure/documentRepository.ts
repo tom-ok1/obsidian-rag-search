@@ -31,7 +31,7 @@ interface OramaDbConfig<T extends AnySchema> {
 /**
  * OramaDb manages partitioned Orama databases
  */
-export class OramaDb<T extends AnySchema> {
+export class DocumentRepository<T extends AnySchema> {
 	private shardMgr: ShardManager<T>;
 
 	private constructor(shardMgr: ShardManager<T>) {
@@ -50,7 +50,7 @@ export class OramaDb<T extends AnySchema> {
 			config.numOfShards,
 			language
 		);
-		return new OramaDb<T>(shardMgr);
+		return new DocumentRepository<T>(shardMgr);
 	}
 
 	/**

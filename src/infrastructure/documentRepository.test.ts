@@ -1,5 +1,5 @@
 import { localFile } from "../utils/LocalFile.js";
-import { OramaDb } from "./oramaDb.js";
+import { DocumentRepository } from "./documentRepository.js";
 import { storeFilename } from "./shardManager.js";
 import * as path from "path";
 import * as fs from "fs";
@@ -115,7 +115,7 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			const oramadb = await OramaDb.init(fileAdapter, config);
+			const oramadb = await DocumentRepository.init(fileAdapter, config);
 
 			for (let i = 0; i < numOfShards; i++) {
 				const shard = await oramadb["shardMgr"]["getShard"](i);
@@ -132,7 +132,11 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			const oramadb = await OramaDb.init(fileAdapter, config, "japanese");
+			const oramadb = await DocumentRepository.init(
+				fileAdapter,
+				config,
+				"japanese"
+			);
 
 			for (let i = 0; i < numOfShards; i++) {
 				const shard = await oramadb["shardMgr"]["getShard"](i);
@@ -166,7 +170,7 @@ describe("OramaDb", () => {
 				expect(fs.existsSync(dbFilePath)).toBe(true);
 			}
 
-			const loadedDb = await OramaDb.init(fileAdapter, config);
+			const loadedDb = await DocumentRepository.init(fileAdapter, config);
 
 			expect(loadedDb).toBeDefined();
 			const randomIdx = Math.floor(Math.random() * numOfShards);
@@ -194,7 +198,7 @@ describe("OramaDb", () => {
 				expect(fs.existsSync(dbFilePath)).toBe(true);
 			}
 
-			const loadedDb = await OramaDb.init(fileAdapter, config);
+			const loadedDb = await DocumentRepository.init(fileAdapter, config);
 
 			const queryVector = [0.5, 0.5, 0.5];
 			const k = 3;
@@ -213,7 +217,7 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			const oramaDb = await OramaDb.init(fileAdapter, config);
+			const oramaDb = await DocumentRepository.init(fileAdapter, config);
 			await oramaDb.saveMany(testDocuments);
 
 			let resultDocuments: any[] = [];
@@ -237,7 +241,7 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			const oramaDb = await OramaDb.init(fileAdapter, config);
+			const oramaDb = await DocumentRepository.init(fileAdapter, config);
 			await oramaDb.saveMany(testDocuments);
 
 			const newDocuments = [
@@ -296,7 +300,7 @@ describe("OramaDb", () => {
 			};
 			const documents = JSON.parse(JSON.stringify(testDocuments));
 
-			const oramaDb = await OramaDb.init(fileAdapter, config);
+			const oramaDb = await DocumentRepository.init(fileAdapter, config);
 			await oramaDb.saveMany(documents);
 
 			// Query vector along Z axis direction
@@ -320,7 +324,7 @@ describe("OramaDb", () => {
 			};
 			const documents = JSON.parse(JSON.stringify(testDocuments));
 
-			const oramaDb = await OramaDb.init(fileAdapter, config);
+			const oramaDb = await DocumentRepository.init(fileAdapter, config);
 			await oramaDb.saveMany(documents);
 
 			const queryVector = [0.6, 0.7, 0.8];
