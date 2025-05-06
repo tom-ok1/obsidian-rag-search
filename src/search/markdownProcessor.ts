@@ -16,10 +16,10 @@ export type MdDocMetadata = {
 export class MarkdownProcessor {
 	constructor(private readonly file: FileAdapter) {}
 
-	async readMarkdownFile(filePath: string) {
+	async readMarkdownFile(filePath: string): Promise<string | undefined> {
 		const extension = await this.file.extname(filePath);
 		if (extension !== "md") return;
-		return await this.file.read(filePath);
+		return (await this.file.read(filePath, "utf-8")) as string;
 	}
 
 	async splitIntoChunks(content: string, documentMetadata: MdDocMetadata) {

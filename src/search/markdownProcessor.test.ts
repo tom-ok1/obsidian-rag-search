@@ -15,7 +15,7 @@ describe("MarkdownProcessor", () => {
 
 	it("readMarkdownFile returns content for .md files", async () => {
 		const content = await processor.readMarkdownFile(sampleFilePath);
-		expect(content.startsWith("# Title")).toBe(true);
+		expect(content?.startsWith("# Title")).toBe(true);
 	});
 
 	it("processMarkdownFile splits into chunks and carries metadata", async () => {
