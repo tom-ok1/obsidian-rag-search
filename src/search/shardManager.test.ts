@@ -159,7 +159,7 @@ describe("ShardManager", () => {
 		});
 	});
 
-	describe("rebalance method", () => {
+	describe("rebalance methods", () => {
 		it("should redistribute documents when increasing shards", async () => {
 			const initialShards = 2;
 			const finalShards = 4;
@@ -239,6 +239,110 @@ describe("ShardManager", () => {
 
 			expect(shardMgr.numOfShards).toBe(numOfShards);
 			expect(persistShardSpy).not.toHaveBeenCalled();
+		});
+
+		describe("autoRebalance method", () => {
+			it("should scale out when shard sizes exceed 500MB", async () => {
+				const initialShards = 2;
+				const expectedShards = 4; // Double the shards to halve the size per shard
+
+				// Create ShardManager with initial shards
+				const shardMgr = await ShardManager.create(
+					fileAdapter,
+					testDirPath,
+					testSchema,
+					initialShards,
+					"english"
+				);
+
+				// Mock file sizes (1.1GB total, ~550MB per shard)
+				const statSpy = vi.spyOn(fileAdapter, "stat");
+				statSpy.mockImplementation(async () => {
+					// Return mock sizes exceeding 500MB per shard
+					return {
+						ctime: Date.now(),
+						mtime: Date.now(),
+						size: 550 * 1024 * 1024, // 550MB
+					};
+				});
+
+				// Spy on the rebalance method
+				const rebalanceSpy = vi.spyOn(shardMgr, "rebalance");
+
+				// Call autoRebalance
+				await shardMgr.autoRebalance();
+
+				// Should have called rebalance with double the shards
+				expect(rebalanceSpy).toHaveBeenCalledWith(expectedShards);
+				expect(shardMgr.numOfShards).toBe(expectedShards);
+			});
+
+			it("should scale in when there are too many small shards", async () => {
+				const initialShards = 8;
+				const expectedShards = 4; // Halve the shards if they're too small
+
+				// Create ShardManager with initial shards
+				const shardMgr = await ShardManager.create(
+					fileAdapter,
+					testDirPath,
+					testSchema,
+					initialShards,
+					"english"
+				);
+
+				// Mock small file sizes (80MB total, ~10MB per shard)
+				const statSpy = vi.spyOn(fileAdapter, "stat");
+				statSpy.mockImplementation(async (filePath) => {
+					return {
+						ctime: Date.now(),
+						mtime: Date.now(),
+						size: 10 * 1024 * 1024, // 10MB
+					};
+				});
+
+				// Spy on the rebalance method
+				const rebalanceSpy = vi.spyOn(shardMgr, "rebalance");
+
+				// Call autoRebalance
+				await shardMgr.autoRebalance();
+
+				// Should have called rebalance to reduce shards
+				expect(rebalanceSpy).toHaveBeenCalledWith(expectedShards);
+				expect(shardMgr.numOfShards).toBe(expectedShards);
+			});
+
+			it("should not rebalance when shard sizes are optimal", async () => {
+				const initialShards = 4;
+
+				// Create ShardManager with initial shards
+				const shardMgr = await ShardManager.create(
+					fileAdapter,
+					testDirPath,
+					testSchema,
+					initialShards,
+					"english"
+				);
+
+				// Mock optimal file sizes (1GB total, 250MB per shard)
+				const statSpy = vi.spyOn(fileAdapter, "stat");
+				statSpy.mockImplementation(async (filePath) => {
+					return {
+						ctime: Date.now(),
+						mtime: Date.now(),
+						size: 250 * 1024 * 1024, // 250MB
+					};
+				});
+
+				// Spy on the rebalance method
+				const rebalanceSpy = vi.spyOn(shardMgr, "rebalance");
+
+				// Call autoRebalance
+				await shardMgr.autoRebalance();
+
+				// Should not have called rebalance as size is optimal
+				expect(rebalanceSpy).not.toHaveBeenCalled();
+				expect(shardMgr.numOfShards).toBe(initialShards);
+			});
 		});
 	});
 });

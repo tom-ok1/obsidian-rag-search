@@ -159,6 +159,65 @@ export class ShardManager<T extends AnySchema> {
 		}
 	}
 
+	private static readonly MAX_SHARD_SIZE_MB: number = 500;
+	private static readonly MIN_SHARD_SIZE_MB: number = 100;
+	private static readonly MIN_SHARDS: number = 2;
+	private static readonly MAX_SHARDS: number = 32;
+
+	/**
+	 * Automatically rebalances shards based on their size
+	 * - If shards exceed MAX_SHARD_SIZE_MB, scales out (doubles shards)
+	 * - If shards are smaller than MIN_SHARD_SIZE_MB and there are many shards, scales in (halves shards)
+	 * - Maintains at least MIN_SHARDS and at most MAX_SHARDS
+	 */
+	async autoRebalance(): Promise<void> {
+		// Check the current size of each shard
+		let totalSize = 0;
+		let existingShardCount = 0;
+
+		for (let i = 0; i < this.numOfShards; i++) {
+			const shardPath = this.shardPath(i);
+			const exists = await this.fileAdapter.exists(shardPath);
+
+			if (exists) {
+				existingShardCount++;
+				const stats = await this.fileAdapter.stat(shardPath);
+				totalSize += stats.size;
+			}
+		}
+
+		if (existingShardCount === 0) {
+			return;
+		}
+
+		const avgShardSizeMB = totalSize / existingShardCount / (1024 * 1024);
+
+		let newNumShards = this.numOfShards;
+
+		// Scale out if shards are too large
+		if (avgShardSizeMB > ShardManager.MAX_SHARD_SIZE_MB) {
+			newNumShards = Math.min(
+				ShardManager.MAX_SHARDS,
+				this.numOfShards * 2
+			);
+		}
+		// Scale in if shards are too small and we have enough shards
+		else if (
+			avgShardSizeMB < ShardManager.MIN_SHARD_SIZE_MB &&
+			this.numOfShards > ShardManager.MIN_SHARDS
+		) {
+			newNumShards = Math.max(
+				ShardManager.MIN_SHARDS,
+				Math.floor(this.numOfShards / 2)
+			);
+		}
+
+		// Only rebalance if the number of shards would change
+		if (newNumShards !== this.numOfShards) {
+			await this.rebalance(newNumShards);
+		}
+	}
+
 	async rebalance(newNumShards: number): Promise<void> {
 		const currentNumShards = this.numOfShards;
 		if (newNumShards === currentNumShards) return;
