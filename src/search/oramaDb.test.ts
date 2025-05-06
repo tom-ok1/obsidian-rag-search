@@ -370,7 +370,6 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 			const documents = JSON.parse(JSON.stringify(testDocuments));
-			const allIds = documents.map((doc: any) => doc.id);
 			const localHashRing = new HashRing({ replicas: 20 });
 
 			// Create DB with initial shards and insert data
@@ -414,7 +413,6 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 			const documents = JSON.parse(JSON.stringify(testDocuments));
-			const allIds = documents.map((doc: any) => doc.id);
 			const localHashRing = new HashRing({ replicas: 20 });
 
 			// Create DB with initial shards and insert data
