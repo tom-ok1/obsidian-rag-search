@@ -1,9 +1,23 @@
-import { useRef, useLayoutEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 
-export const useAutoScroll = (dep: unknown[]) => {
-	const ref = useRef<HTMLDivElement>(null);
-	useLayoutEffect(() => {
-		ref.current?.scrollIntoView({ behavior: "smooth" });
-	}, dep);
-	return ref;
+const THRESHOLD = 32; // px
+
+export const useAutoScroll = (dep: unknown) => {
+	const containerRef = useRef<HTMLDivElement>(null);
+	const bottomRef = useRef<HTMLDivElement>(null);
+
+	const isPinnedBottom = useCallback(() => {
+		const el = containerRef.current;
+		if (!el) return false;
+		const { scrollTop, clientHeight, scrollHeight } = el;
+		return scrollHeight - (scrollTop + clientHeight) < THRESHOLD;
+	}, []);
+
+	useEffect(() => {
+		if (isPinnedBottom()) {
+			bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+		}
+	}, [dep, isPinnedBottom]);
+
+	return { containerRef, bottomRef };
 };
