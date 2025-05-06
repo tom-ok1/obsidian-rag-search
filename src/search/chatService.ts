@@ -45,7 +45,6 @@ export class ChatService {
 		const vectorStore = await OramaStore.init(embeddings, {
 			file,
 			dirPath,
-			numOfShards,
 			modelName: model._modelType(),
 			language,
 		});
