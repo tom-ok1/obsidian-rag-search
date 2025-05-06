@@ -4,20 +4,26 @@ import { FileAdapter } from "./fileAdapter.js";
 export class VaultFile implements FileAdapter {
 	constructor(private readonly app: App) {}
 
-	async read(filePath: string): Promise<string> {
+	async read(filePath: string, bufferEncoding: BufferEncoding) {
 		const normalizedPath = normalizePath(filePath);
+		if (bufferEncoding === "binary") {
+			return this.app.vault.adapter.readBinary(normalizedPath);
+		}
 		return this.app.vault.adapter.read(normalizedPath);
 	}
 	async write(
 		filename: string,
 		dirname: string,
-		content: string
+		content: string | ArrayBuffer
 	): Promise<void> {
 		const normalizedDir = normalizePath(dirname);
 		const normalizedPath = normalizePath(filename);
 		await this.app.vault.adapter.mkdir(normalizedDir);
 		const fullPath = normalizePath(`${normalizedDir}/${normalizedPath}`);
-		return this.app.vault.adapter.write(fullPath, content);
+		if (typeof content === "string") {
+			return this.app.vault.adapter.write(fullPath, content);
+		}
+		return this.app.vault.adapter.writeBinary(fullPath, content);
 	}
 	async delete(filePath: string): Promise<void> {
 		const normalizedPath = normalizePath(filePath);

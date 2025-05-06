@@ -115,7 +115,7 @@ export class OramaStore extends VectorStore {
 		k: number,
 		filter?: Partial<WhereCondition<MdDocRawSchema>>
 	): Promise<[MdDocInterface, number][]> {
-		const results = this.db.search(query, { k, filter });
+		const results = await this.db.search(query, { k, filter });
 		return results.map(({ document, score }) => [
 			this.toDocument(document),
 			score,

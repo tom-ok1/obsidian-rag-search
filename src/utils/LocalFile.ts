@@ -4,17 +4,20 @@ import * as path from "path";
 import { FileStats } from "obsidian";
 
 export class localFile implements FileAdapter {
-	async read(filePath: string): Promise<string> {
-		return fs.promises.readFile(filePath, "utf-8");
+	async read(filePath: string, bufferEncoding: BufferEncoding) {
+		return fs.promises.readFile(filePath, bufferEncoding);
 	}
 	async write(
 		filename: string,
 		dirname: string,
-		content: string
+		content: string | ArrayBuffer
 	): Promise<void> {
 		const filePath = path.join(dirname, filename);
 		await fs.promises.mkdir(dirname, { recursive: true });
-		return fs.promises.writeFile(filePath, content, "utf-8");
+		if (typeof content === "string") {
+			return fs.promises.writeFile(filePath, content, "utf-8");
+		}
+		return fs.promises.writeFile(filePath, Buffer.from(content));
 	}
 	async delete(filePath: string): Promise<void> {
 		return fs.promises.rm(filePath);
