@@ -58,7 +58,7 @@ export class ShardManager<T extends AnySchema> {
 			cacheSize
 		);
 		manager.language = language;
-		await manager.createShards(language);
+		await manager.createShards();
 		return manager;
 	}
 
@@ -164,33 +164,14 @@ export class ShardManager<T extends AnySchema> {
 		);
 	}
 
-	private async createShards(language: string): Promise<void> {
+	private async createShards(): Promise<void> {
 		for (let i = 0; i < this.numOfShards; i++) {
-			const db =
-				language === "japanese"
-					? this.createWithTokenizer(this.schema)
-					: create({ schema: this.schema });
+			const db = this.createBasedOnLangage();
 
 			// No need to add node here, already done in constructor
 			await this.setShard(db, i);
 			await this.persistShard(db, i);
 		}
-	}
-
-	// currently only supports Japanese
-	private createWithTokenizer(schema: T) {
-		const db = create({
-			schema,
-			components: {
-				tokenizer: createTokenizer({
-					stopWords: japaneseStopwords,
-					language: "japanese",
-				}),
-			},
-		});
-		// Ensure the schema is attached to the database instance
-		db.schema = schema;
-		return db;
 	}
 
 	private async loadShards(): Promise<void> {
@@ -297,10 +278,7 @@ export class ShardManager<T extends AnySchema> {
 		// Expand the hash ring if shards are added
 		if (newNumShards > currentNumShards) {
 			for (let i = this.cache.length; i < newNumShards; i++) {
-				const db =
-					this.language === "japanese"
-						? this.createWithTokenizer(this.schema)
-						: create({ schema: this.schema });
+				const db = this.createBasedOnLangage();
 				this.setShard(db, i);
 			}
 		}
@@ -309,10 +287,7 @@ export class ShardManager<T extends AnySchema> {
 		if (newNumShards > currentNumShards) {
 			for (let i = 0; i < newNumShards; i++) {
 				if (i >= currentNumShards) {
-					const db =
-						this.language === "japanese"
-							? this.createWithTokenizer(this.schema)
-							: create({ schema: this.schema });
+					const db = this.createBasedOnLangage();
 					await this.setShard(db, i);
 					await this.persistShard(db, i);
 				}
@@ -361,6 +336,25 @@ export class ShardManager<T extends AnySchema> {
 			}
 		}
 		this.cache = newCache;
+	}
+
+	// currently only supports Japanese
+	private createBasedOnLangage() {
+		const components =
+			this.language === "japanese"
+				? {
+						tokenizer: createTokenizer({
+							stopWords: japaneseStopwords,
+							language: "japanese",
+						}),
+				  }
+				: undefined;
+		const db = create({
+			schema: this.schema,
+			components,
+		});
+		db.schema = this.schema;
+		return db;
 	}
 
 	private async moveDocument(
