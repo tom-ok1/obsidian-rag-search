@@ -64,7 +64,7 @@ describe("OramaStore", () => {
 			fs.writeFileSync(testDbFilePath(1), binaryData, "binary");
 			expect(fs.existsSync(testDbFilePath(1))).toBe(true);
 
-			const store = await OramaStore.create(mockEmbeddings, {
+			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
 				numOfShards: 1,
 				file,
@@ -78,7 +78,7 @@ describe("OramaStore", () => {
 			const mockEmbeddingDimensions = 256;
 			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
 
-			const store = await OramaStore.create(mockEmbeddings, {
+			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
 				numOfShards: 1,
 				file,
@@ -100,7 +100,7 @@ describe("OramaStore", () => {
 			const SHARDS = 3;
 			const mockEmbeddingDimensions = 128;
 			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
-			await OramaStore.create(mockEmbeddings, {
+			await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
 				numOfShards: SHARDS,
 				file,
@@ -143,7 +143,7 @@ describe("OramaStore", () => {
 				}),
 			];
 
-			const store = await OramaStore.create(mockEmbeddings, {
+			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
 				numOfShards: 1,
 				file,
@@ -169,7 +169,7 @@ describe("OramaStore", () => {
 			const mockEmbeddingDimensions = 128;
 			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
 
-			const store = await OramaStore.create(mockEmbeddings, {
+			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
 				numOfShards: 1,
 				file,
@@ -228,7 +228,7 @@ describe("OramaStore", () => {
 			const mockEmbeddingDimensions = 128;
 			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
 
-			const store = await OramaStore.create(mockEmbeddings, {
+			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
 				numOfShards: 1,
 				file,
@@ -266,7 +266,7 @@ describe("OramaStore", () => {
 			const mockEmbeddingDimensions = 3;
 			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
 
-			const store = await OramaStore.create(mockEmbeddings, {
+			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
 				numOfShards: 1,
 				file,
@@ -339,7 +339,7 @@ describe("OramaStore", () => {
 			const mockEmbeddingDimensions = 3;
 			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
 
-			const store = await OramaStore.create(mockEmbeddings, {
+			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
 				numOfShards: 1,
 				file,
@@ -425,7 +425,7 @@ describe("OramaStore", () => {
 			const mockEmbeddingDimensions = 3;
 			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
 
-			const store = await OramaStore.create(mockEmbeddings, {
+			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
 				numOfShards: 1,
 				file,
@@ -514,7 +514,7 @@ describe("OramaStore", () => {
 			const mockEmbeddingDimensions = 3;
 			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
 
-			const store = await OramaStore.create(mockEmbeddings, {
+			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
 				numOfShards: 1,
 				file,

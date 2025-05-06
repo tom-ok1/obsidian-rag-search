@@ -38,30 +38,17 @@ export class OramaDb<T extends AnySchema> {
 		this.shardMgr = shardMgr;
 	}
 
-	static async create<T extends AnySchema>(
+	static async init<T extends AnySchema>(
 		fileAdapter: FileAdapter,
 		config: OramaDbConfig<T>,
 		language = "english"
 	) {
-		const shardMgr = await ShardManager.create<T>(
+		const shardMgr = await ShardManager.init(
 			fileAdapter,
 			config.dirPath,
 			config.schema,
 			config.numOfShards,
 			language
-		);
-		return new OramaDb<T>(shardMgr);
-	}
-
-	static async load<T extends AnySchema>(
-		fileAdapter: FileAdapter,
-		config: OramaDbConfig<T>
-	) {
-		const shardMgr = await ShardManager.load<T>(
-			fileAdapter,
-			config.dirPath,
-			config.schema,
-			config.numOfShards
 		);
 		return new OramaDb<T>(shardMgr);
 	}

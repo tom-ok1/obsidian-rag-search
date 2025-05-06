@@ -42,7 +42,7 @@ export class ChatService {
 			},
 		});
 
-		const vectorStore = await OramaStore.create(embeddings, {
+		const vectorStore = await OramaStore.init(embeddings, {
 			file,
 			dirPath,
 			numOfShards,

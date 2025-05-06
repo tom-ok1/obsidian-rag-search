@@ -38,7 +38,7 @@ export class ShardManager<T extends AnySchema> {
 		}
 	}
 
-	static async create<S extends AnySchema>(
+	private static async create<S extends AnySchema>(
 		fileAdapter: FileAdapter,
 		dirPath: string,
 		schema: S,
@@ -57,7 +57,7 @@ export class ShardManager<T extends AnySchema> {
 		return manager;
 	}
 
-	static async load<S extends AnySchema>(
+	private static async load<S extends AnySchema>(
 		fileAdapter: FileAdapter,
 		dirPath: string,
 		schema: S,
@@ -73,6 +73,35 @@ export class ShardManager<T extends AnySchema> {
 		);
 		await manager.loadShards();
 		return manager;
+	}
+
+	static async init<S extends AnySchema>(
+		fileAdapter: FileAdapter,
+		dirPath: string,
+		schema: S,
+		numOfShards: number,
+		language: string = "english",
+		cacheSize: number = 3
+	): Promise<ShardManager<S>> {
+		const isExists = await fileAdapter.exists(dirPath);
+		if (isExists) {
+			return ShardManager.load(
+				fileAdapter,
+				dirPath,
+				schema,
+				numOfShards,
+				cacheSize
+			);
+		} else {
+			return ShardManager.create(
+				fileAdapter,
+				dirPath,
+				schema,
+				numOfShards,
+				language,
+				cacheSize
+			);
+		}
 	}
 
 	async getShard(idx: number): Promise<Orama<T>> {

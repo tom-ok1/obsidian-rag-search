@@ -46,7 +46,7 @@ export class OramaStore extends VectorStore {
 		return "orama";
 	}
 
-	static async create(
+	static async init(
 		embeddings: EmbeddingsInterface,
 		dbConfig: OramaStoreConfig
 	) {
@@ -55,24 +55,15 @@ export class OramaStore extends VectorStore {
 		store.modelName = modelName;
 
 		const schema = await store.documentSchema();
-		const isExists = await file.exists(dirPath);
-		if (isExists) {
-			store.db = await OramaDb.load(file, {
+		store.db = await OramaDb.init(
+			file,
+			{
 				dirPath,
 				numOfShards,
 				schema,
-			});
-		} else {
-			store.db = await OramaDb.create(
-				file,
-				{
-					dirPath,
-					numOfShards,
-					schema,
-				},
-				language
-			);
-		}
+			},
+			language
+		);
 
 		return store;
 	}

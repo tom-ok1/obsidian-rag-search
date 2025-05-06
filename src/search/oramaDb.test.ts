@@ -88,7 +88,7 @@ describe("OramaDb", () => {
 
 	async function loadTestDb(idx: number) {
 		const data = await fs.readFileSync(
-			path.join(testDirPath, storeFilename(idx))
+			path.join(testDirPath, storeFilename(idx + 1))
 		);
 		const db = await restore("binary", data);
 		return db;
@@ -98,7 +98,6 @@ describe("OramaDb", () => {
 		if (fs.existsSync(testDirPath)) {
 			fs.rmSync(testDirPath, { recursive: true, force: true });
 		}
-		fs.mkdirSync(testDirPath, { recursive: true });
 	});
 
 	afterEach(() => {
@@ -116,7 +115,7 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			const oramadb = await OramaDb.create(fileAdapter, config);
+			const oramadb = await OramaDb.init(fileAdapter, config);
 
 			for (let i = 0; i < numOfShards; i++) {
 				const shard = await oramadb["shardMgr"]["getShard"](i);
@@ -133,11 +132,7 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			const oramadb = await OramaDb.create(
-				fileAdapter,
-				config,
-				"japanese"
-			);
+			const oramadb = await OramaDb.init(fileAdapter, config, "japanese");
 
 			for (let i = 0; i < numOfShards; i++) {
 				const shard = await oramadb["shardMgr"]["getShard"](i);
@@ -158,6 +153,8 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
+			fs.mkdirSync(testDirPath, { recursive: true });
+
 			// Arrange - Create and save multiple shards
 			for (let i = 1; i <= numOfShards; i++) {
 				const db = await createTestDb();
@@ -169,7 +166,7 @@ describe("OramaDb", () => {
 				expect(fs.existsSync(dbFilePath)).toBe(true);
 			}
 
-			const loadedDb = await OramaDb.load(fileAdapter, config);
+			const loadedDb = await OramaDb.init(fileAdapter, config);
 
 			expect(loadedDb).toBeDefined();
 			const randomIdx = Math.floor(Math.random() * numOfShards);
@@ -185,6 +182,8 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
+			fs.mkdirSync(testDirPath, { recursive: true });
+
 			for (let i = 1; i <= numOfShards; i++) {
 				const db = await createTestDb();
 				const data = await persist(db, "binary");
@@ -195,7 +194,7 @@ describe("OramaDb", () => {
 				expect(fs.existsSync(dbFilePath)).toBe(true);
 			}
 
-			const loadedDb = await OramaDb.load(fileAdapter, config);
+			const loadedDb = await OramaDb.init(fileAdapter, config);
 
 			const queryVector = [0.5, 0.5, 0.5];
 			const k = 3;
@@ -214,13 +213,13 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			const oramaDb = await OramaDb.create(fileAdapter, config);
+			const oramaDb = await OramaDb.init(fileAdapter, config);
 			await oramaDb.saveMany(testDocuments);
 
 			let resultDocuments: any[] = [];
 
 			for (let i = 0; i < numOfShards; i++) {
-				const testDb = await loadTestDb(i + 1);
+				const testDb = await loadTestDb(i);
 				const res = await search(testDb, {});
 				resultDocuments = resultDocuments.concat(res.hits);
 
@@ -238,7 +237,7 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			const oramaDb = await OramaDb.create(fileAdapter, config);
+			const oramaDb = await OramaDb.init(fileAdapter, config);
 			await oramaDb.saveMany(testDocuments);
 
 			const newDocuments = [
@@ -259,7 +258,7 @@ describe("OramaDb", () => {
 			let resultDocuments: any[] = [];
 
 			for (let i = 0; i < numOfShards; i++) {
-				const testDb = await loadTestDb(i + 1);
+				const testDb = await loadTestDb(i);
 				const res = await search(testDb, { includeVectors: true });
 				resultDocuments = resultDocuments.concat(res.hits);
 			}
@@ -297,7 +296,7 @@ describe("OramaDb", () => {
 			};
 			const documents = JSON.parse(JSON.stringify(testDocuments));
 
-			const oramaDb = await OramaDb.create(fileAdapter, config);
+			const oramaDb = await OramaDb.init(fileAdapter, config);
 			await oramaDb.saveMany(documents);
 
 			// Query vector along Z axis direction
@@ -321,7 +320,7 @@ describe("OramaDb", () => {
 			};
 			const documents = JSON.parse(JSON.stringify(testDocuments));
 
-			const oramaDb = await OramaDb.create(fileAdapter, config);
+			const oramaDb = await OramaDb.init(fileAdapter, config);
 			await oramaDb.saveMany(documents);
 
 			const queryVector = [0.6, 0.7, 0.8];

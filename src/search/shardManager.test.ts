@@ -56,9 +56,11 @@ describe("ShardManager", () => {
 	describe("Creating a new ShardManager", () => {
 		it("should create the specified number of database shards", async () => {
 			const numOfShards = 5;
-			const shardMgr = await ShardManager.create(
+			// Create a directory that doesn't exist to force init to use create path
+			const newDirPath = path.join(testDirPath, "new_shards");
+			const shardMgr = await ShardManager.init(
 				fileAdapter,
-				testDirPath,
+				newDirPath,
 				testSchema,
 				numOfShards,
 				"english"
@@ -73,9 +75,11 @@ describe("ShardManager", () => {
 
 		it("should create a database with japanese tokenizer", async () => {
 			const numOfShards = 5;
-			const shardMgr = await ShardManager.create(
+			// Create a directory that doesn't exist to force init to use create path
+			const newDirPath = path.join(testDirPath, "japanese_shards");
+			const shardMgr = await ShardManager.init(
 				fileAdapter,
-				testDirPath,
+				newDirPath,
 				testSchema,
 				numOfShards,
 				"japanese"
@@ -105,7 +109,8 @@ describe("ShardManager", () => {
 				expect(fs.existsSync(dbFilePath)).toBe(true);
 			}
 
-			const shardMgr = await ShardManager.load(
+			// Use init to load existing shards
+			const shardMgr = await ShardManager.init(
 				fileAdapter,
 				testDirPath,
 				testSchema,
@@ -122,9 +127,11 @@ describe("ShardManager", () => {
 	describe("Shard operations", () => {
 		it("should persist shards correctly", async () => {
 			const numOfShards = 3;
-			const shardMgr = await ShardManager.create(
+			// Create a directory that doesn't exist to force init to use create path
+			const newDirPath = path.join(testDirPath, "persist_test");
+			const shardMgr = await ShardManager.init(
 				fileAdapter,
-				testDirPath,
+				newDirPath,
 				testSchema,
 				numOfShards,
 				"english"
@@ -136,15 +143,17 @@ describe("ShardManager", () => {
 
 			// Persist the shard and check that the file exists
 			await shardMgr.persistShard(shard, 0);
-			const filePath = path.join(testDirPath, storeFilename(1));
+			const filePath = path.join(newDirPath, storeFilename(1));
 			expect(fs.existsSync(filePath)).toBe(true);
 		});
 
 		it("should get node based on id", async () => {
 			const numOfShards = 5;
-			const shardMgr = await ShardManager.create(
+			// Create a directory that doesn't exist to force init to use create path
+			const newDirPath = path.join(testDirPath, "node_test");
+			const shardMgr = await ShardManager.init(
 				fileAdapter,
-				testDirPath,
+				newDirPath,
 				testSchema,
 				numOfShards,
 				"english"
@@ -165,9 +174,10 @@ describe("ShardManager", () => {
 			const finalShards = 4;
 
 			// Create ShardManager with initial shards
-			const shardMgr = await ShardManager.create(
+			const newDirPath = path.join(testDirPath, "rebalance_increase");
+			const shardMgr = await ShardManager.init(
 				fileAdapter,
-				testDirPath,
+				newDirPath,
 				testSchema,
 				initialShards,
 				"english"
@@ -186,7 +196,7 @@ describe("ShardManager", () => {
 			expect(shardMgr.numOfShards).toBe(finalShards);
 
 			// Check number of shard files
-			const files = fs.readdirSync(testDirPath);
+			const files = fs.readdirSync(newDirPath);
 			expect(files.length).toBe(finalShards);
 		});
 
@@ -195,9 +205,10 @@ describe("ShardManager", () => {
 			const finalShards = 2;
 
 			// Create ShardManager with initial shards
-			const shardMgr = await ShardManager.create(
+			const newDirPath = path.join(testDirPath, "rebalance_decrease");
+			const shardMgr = await ShardManager.init(
 				fileAdapter,
-				testDirPath,
+				newDirPath,
 				testSchema,
 				initialShards,
 				"english"
@@ -216,7 +227,7 @@ describe("ShardManager", () => {
 			expect(shardMgr.numOfShards).toBe(finalShards);
 
 			// Check number of shard files (should delete old ones)
-			const files = fs.readdirSync(testDirPath);
+			const files = fs.readdirSync(newDirPath);
 			expect(files.length).toBe(finalShards);
 		});
 
@@ -224,9 +235,10 @@ describe("ShardManager", () => {
 			const numOfShards = 3;
 
 			// Create ShardManager
-			const shardMgr = await ShardManager.create(
+			const newDirPath = path.join(testDirPath, "rebalance_noop");
+			const shardMgr = await ShardManager.init(
 				fileAdapter,
-				testDirPath,
+				newDirPath,
 				testSchema,
 				numOfShards,
 				"english"
@@ -247,9 +259,13 @@ describe("ShardManager", () => {
 				const expectedShards = 4; // Double the shards to halve the size per shard
 
 				// Create ShardManager with initial shards
-				const shardMgr = await ShardManager.create(
-					fileAdapter,
+				const newDirPath = path.join(
 					testDirPath,
+					"rebalance_scale_out"
+				);
+				const shardMgr = await ShardManager.init(
+					fileAdapter,
+					newDirPath,
 					testSchema,
 					initialShards,
 					"english"
@@ -282,9 +298,10 @@ describe("ShardManager", () => {
 				const expectedShards = 4; // Halve the shards if they're too small
 
 				// Create ShardManager with initial shards
-				const shardMgr = await ShardManager.create(
+				const newDirPath = path.join(testDirPath, "rebalance_scale_in");
+				const shardMgr = await ShardManager.init(
 					fileAdapter,
-					testDirPath,
+					newDirPath,
 					testSchema,
 					initialShards,
 					"english"
@@ -315,9 +332,10 @@ describe("ShardManager", () => {
 				const initialShards = 4;
 
 				// Create ShardManager with initial shards
-				const shardMgr = await ShardManager.create(
+				const newDirPath = path.join(testDirPath, "rebalance_optimal");
+				const shardMgr = await ShardManager.init(
 					fileAdapter,
-					testDirPath,
+					newDirPath,
 					testSchema,
 					initialShards,
 					"english"
