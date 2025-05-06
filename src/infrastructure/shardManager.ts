@@ -13,6 +13,9 @@ import { LRU } from "../utils/LRU.js";
 import { createTokenizer } from "@orama/tokenizers/japanese";
 import { stopwords as japaneseStopwords } from "@orama/stopwords/japanese";
 
+/**
+ * @param id - Shard ID 0-indexed
+ */
 export const storeFilename = (id: number) => `vectorstore-${id}`;
 
 /**

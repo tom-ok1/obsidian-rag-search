@@ -9,7 +9,7 @@ import * as path from "path";
 import { create, count } from "@orama/orama";
 import { persist, restore } from "@orama/plugin-data-persistence";
 import { localFile } from "../utils/LocalFile.js";
-import { storeFilename } from "./documentRepository.js";
+import { storeFilename } from "./shardManager.js";
 
 class MockEmbeddings extends Embeddings {
 	private dimensions: number;

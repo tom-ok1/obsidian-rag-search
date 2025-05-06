@@ -14,8 +14,6 @@ import {
 import { MaxMarginalRelevanceSearchOptions } from "@langchain/core/vectorstores";
 import { ShardManager } from "./shardManager.js";
 
-export { storeFilename } from "./shardManager.js";
-
 /**
  * OramaDbConfig defines the configuration for a partitioned Orama database
  * @param dirPath - Directory path to store the database files
