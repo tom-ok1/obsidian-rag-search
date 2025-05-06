@@ -58,15 +58,11 @@ export class OramaStore extends VectorStore {
 		const schema = await store.documentSchema();
 		const isExists = await file.exists(dirPath);
 		if (isExists) {
-			store.db = await OramaDb.load(
-				file,
-				{
-					dirPath,
-					numOfShards,
-					schema,
-				},
-				new HashRing()
-			);
+			store.db = await OramaDb.load(file, {
+				dirPath,
+				numOfShards,
+				schema,
+			});
 		} else {
 			store.db = await OramaDb.create(
 				file,
@@ -75,7 +71,6 @@ export class OramaStore extends VectorStore {
 					numOfShards,
 					schema,
 				},
-				new HashRing(),
 				language
 			);
 		}

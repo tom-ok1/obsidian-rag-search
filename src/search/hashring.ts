@@ -75,6 +75,10 @@ export class HashRing<TNode extends string = string> {
 		return this.replicas;
 	}
 
+	get nodesCount(): number {
+		return this.nodes.size;
+	}
+
 	private insert(vn: { hash: number; node: TNode }): void {
 		let lo = 0,
 			hi = this.ring.length;

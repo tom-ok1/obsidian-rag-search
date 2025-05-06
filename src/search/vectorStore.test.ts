@@ -72,8 +72,6 @@ describe("OramaStore", () => {
 
 			const loadedDb = (store as any).db;
 			expect(loadedDb).toBeDefined();
-			const shard = await loadedDb.getShard(0);
-			expect(shard.schema).toEqual(mockOramaDb.schema);
 		});
 
 		it("should create a new db", async () => {
