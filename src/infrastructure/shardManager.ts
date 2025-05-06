@@ -24,6 +24,7 @@ export const storeFilename = (id: number) => `vectorstore-${id}`;
 export class ShardManager<T extends AnySchema> {
 	private cache: LRU<number, Orama<T>>;
 	private ring: HashRing;
+	private language: string = "english";
 
 	private constructor(
 		private readonly fileAdapter: FileAdapter,
@@ -45,17 +46,18 @@ export class ShardManager<T extends AnySchema> {
 		fileAdapter: FileAdapter,
 		dirPath: string,
 		schema: S,
-		numOfShards: number,
 		language: string,
 		cacheSize: number = 3
 	): Promise<ShardManager<S>> {
+		const defaultShards = 1;
 		const manager = new ShardManager(
 			fileAdapter,
 			dirPath,
 			schema,
-			numOfShards,
+			defaultShards,
 			cacheSize
 		);
+		manager.language = language;
 		await manager.createShards(language);
 		return manager;
 	}
@@ -64,43 +66,65 @@ export class ShardManager<T extends AnySchema> {
 		fileAdapter: FileAdapter,
 		dirPath: string,
 		schema: S,
-		numOfShards: number,
 		cacheSize: number = 3
 	): Promise<ShardManager<S>> {
+		const detectedShards = await ShardManager.detectShardCount(
+			fileAdapter,
+			dirPath
+		);
 		const manager = new ShardManager(
 			fileAdapter,
 			dirPath,
 			schema,
-			numOfShards,
+			detectedShards,
 			cacheSize
 		);
 		await manager.loadShards();
 		return manager;
 	}
 
+	private static async detectShardCount(
+		fileAdapter: FileAdapter,
+		dirPath: string
+	): Promise<number> {
+		let shardCount = 0;
+		let shardIdx = 1; // Shard IDs are 1-indexed in filenames
+		let fileExists = true;
+
+		while (fileExists) {
+			const filePath = fileAdapter.join(dirPath, storeFilename(shardIdx));
+			fileExists = await fileAdapter.exists(filePath);
+			if (fileExists) {
+				shardCount++;
+				shardIdx++;
+			}
+		}
+
+		return Math.max(1, shardCount);
+	}
+
 	static async init<S extends AnySchema>(
 		fileAdapter: FileAdapter,
 		dirPath: string,
 		schema: S,
-		numOfShards: number,
 		language: string = "english",
 		cacheSize: number = 3
 	): Promise<ShardManager<S>> {
 		const isExists = await fileAdapter.exists(dirPath);
 		if (isExists) {
-			return ShardManager.load(
+			const manager = await ShardManager.load(
 				fileAdapter,
 				dirPath,
 				schema,
-				numOfShards,
 				cacheSize
 			);
+			manager.language = language;
+			return manager;
 		} else {
 			return ShardManager.create(
 				fileAdapter,
 				dirPath,
 				schema,
-				numOfShards,
 				language,
 				cacheSize
 			);
@@ -273,7 +297,10 @@ export class ShardManager<T extends AnySchema> {
 		// Expand the hash ring if shards are added
 		if (newNumShards > currentNumShards) {
 			for (let i = this.cache.length; i < newNumShards; i++) {
-				const db = create({ schema: this.schema });
+				const db =
+					this.language === "japanese"
+						? this.createWithTokenizer(this.schema)
+						: create({ schema: this.schema });
 				this.setShard(db, i);
 			}
 		}
@@ -282,7 +309,10 @@ export class ShardManager<T extends AnySchema> {
 		if (newNumShards > currentNumShards) {
 			for (let i = 0; i < newNumShards; i++) {
 				if (i >= currentNumShards) {
-					const db = create({ schema: this.schema });
+					const db =
+						this.language === "japanese"
+							? this.createWithTokenizer(this.schema)
+							: create({ schema: this.schema });
 					await this.setShard(db, i);
 					await this.persistShard(db, i);
 				}

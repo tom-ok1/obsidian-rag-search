@@ -25,7 +25,6 @@ export class MarkDownDoc extends Document<MdDocMetadata> {
 
 interface OramaStoreConfig {
 	dirPath: string;
-	numOfShards: number;
 	file: FileAdapter;
 	modelName?: string;
 	language?: string;
@@ -51,7 +50,7 @@ export class OramaStore extends VectorStore {
 		dbConfig: OramaStoreConfig
 	) {
 		const store = new OramaStore(embeddings, dbConfig);
-		const { file, dirPath, numOfShards, modelName, language } = dbConfig;
+		const { file, dirPath, modelName, language } = dbConfig;
 		store.modelName = modelName;
 
 		const schema = await store.documentSchema();
@@ -59,7 +58,6 @@ export class OramaStore extends VectorStore {
 			file,
 			{
 				dirPath,
-				numOfShards,
 				schema,
 			},
 			language

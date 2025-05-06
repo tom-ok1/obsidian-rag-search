@@ -17,12 +17,10 @@ import { ShardManager } from "./shardManager.js";
 /**
  * OramaDbConfig defines the configuration for a partitioned Orama database
  * @param dirPath - Directory path to store the database files
- * @param numOfShards - Number of shards to create for the database
  * @param schema - Schema definition for the database
  */
 interface DbConfig<T extends AnySchema> {
 	dirPath: string;
-	numOfShards: number;
 	schema: T;
 }
 
@@ -45,7 +43,6 @@ export class DocumentRepository<T extends AnySchema> {
 			fileAdapter,
 			config.dirPath,
 			config.schema,
-			config.numOfShards,
 			language
 		);
 		return new DocumentRepository<T>(shardMgr);

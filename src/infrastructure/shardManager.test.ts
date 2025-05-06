@@ -55,18 +55,19 @@ describe("ShardManager", () => {
 
 	describe("Creating a new ShardManager", () => {
 		it("should create the specified number of database shards", async () => {
-			const numOfShards = 5;
 			// Create a directory that doesn't exist to force init to use create path
 			const newDirPath = path.join(testDirPath, "new_shards");
 			const shardMgr = await ShardManager.init(
 				fileAdapter,
 				newDirPath,
 				testSchema,
-				numOfShards,
 				"english"
 			);
 
-			for (let i = 0; i < numOfShards; i++) {
+			// Default number of shards should be 1 for new ShardManager
+			expect(shardMgr.numOfShards).toBe(1);
+
+			for (let i = 0; i < shardMgr.numOfShards; i++) {
 				const shard = await shardMgr.getShard(i);
 				expect(shard).toBeDefined();
 				expect(shard.schema).toEqual(testSchema);
@@ -74,18 +75,19 @@ describe("ShardManager", () => {
 		});
 
 		it("should create a database with japanese tokenizer", async () => {
-			const numOfShards = 5;
 			// Create a directory that doesn't exist to force init to use create path
 			const newDirPath = path.join(testDirPath, "japanese_shards");
 			const shardMgr = await ShardManager.init(
 				fileAdapter,
 				newDirPath,
 				testSchema,
-				numOfShards,
 				"japanese"
 			);
 
-			for (let i = 0; i < numOfShards; i++) {
+			// Default number of shards should be 1 for new ShardManager
+			expect(shardMgr.numOfShards).toBe(1);
+
+			for (let i = 0; i < shardMgr.numOfShards; i++) {
 				const shard = await shardMgr.getShard(i);
 				expect(shard).toBeDefined();
 				expect(shard.schema).toEqual(testSchema);
@@ -96,10 +98,10 @@ describe("ShardManager", () => {
 
 	describe("Loading a ShardManager", () => {
 		it("should load all database shards", async () => {
-			const numOfShards = 5;
+			const existingShards = 5;
 
 			// Arrange - Create and save multiple shards
-			for (let i = 1; i <= numOfShards; i++) {
+			for (let i = 1; i <= existingShards; i++) {
 				const db = await createTestDb();
 				const data = await persist(db, "binary");
 
@@ -113,27 +115,49 @@ describe("ShardManager", () => {
 			const shardMgr = await ShardManager.init(
 				fileAdapter,
 				testDirPath,
-				testSchema,
-				numOfShards
+				testSchema
 			);
 
 			expect(shardMgr).toBeDefined();
-			const randomIdx = Math.floor(Math.random() * numOfShards);
+			// Should automatically detect 5 shards
+			expect(shardMgr.numOfShards).toBe(existingShards);
+
+			const randomIdx = Math.floor(Math.random() * existingShards);
 			const shard = await shardMgr.getShard(randomIdx);
 			expect(shard.schema).toEqual(testSchema);
+		});
+
+		it("should automatically detect shard count when loading", async () => {
+			// Create 3 shard files
+			const existingShards = 3;
+			for (let i = 1; i <= existingShards; i++) {
+				const db = await createTestDb();
+				const data = await persist(db, "binary");
+
+				const dbFilePath = path.join(testDirPath, storeFilename(i));
+				fs.writeFileSync(dbFilePath, data, "binary");
+			}
+
+			// Initialize without specifying shard count
+			const shardMgr = await ShardManager.init(
+				fileAdapter,
+				testDirPath,
+				testSchema
+			);
+
+			// Should automatically detect the correct number of shards
+			expect(shardMgr.numOfShards).toBe(existingShards);
 		});
 	});
 
 	describe("Shard operations", () => {
 		it("should persist shards correctly", async () => {
-			const numOfShards = 3;
 			// Create a directory that doesn't exist to force init to use create path
 			const newDirPath = path.join(testDirPath, "persist_test");
 			const shardMgr = await ShardManager.init(
 				fileAdapter,
 				newDirPath,
 				testSchema,
-				numOfShards,
 				"english"
 			);
 
@@ -148,38 +172,34 @@ describe("ShardManager", () => {
 		});
 
 		it("should get node based on id", async () => {
-			const numOfShards = 5;
 			// Create a directory that doesn't exist to force init to use create path
 			const newDirPath = path.join(testDirPath, "node_test");
 			const shardMgr = await ShardManager.init(
 				fileAdapter,
 				newDirPath,
 				testSchema,
-				numOfShards,
 				"english"
 			);
 
 			const testId = "docX";
 			const node = shardMgr.getNode(testId);
 
-			// The node should be a string containing a number between 0 and numOfShards-1
+			// The node should be a string containing a valid shard index
 			expect(parseInt(node)).toBeGreaterThanOrEqual(0);
-			expect(parseInt(node)).toBeLessThan(numOfShards);
+			expect(parseInt(node)).toBeLessThan(shardMgr.numOfShards);
 		});
 	});
 
 	describe("rebalance methods", () => {
 		it("should redistribute documents when increasing shards", async () => {
-			const initialShards = 2;
 			const finalShards = 4;
 
-			// Create ShardManager with initial shards
+			// Create ShardManager with default initial shard (1)
 			const newDirPath = path.join(testDirPath, "rebalance_increase");
 			const shardMgr = await ShardManager.init(
 				fileAdapter,
 				newDirPath,
 				testSchema,
-				initialShards,
 				"english"
 			);
 
@@ -201,18 +221,20 @@ describe("ShardManager", () => {
 		});
 
 		it("should redistribute documents when decreasing shards", async () => {
-			const initialShards = 5;
 			const finalShards = 2;
 
-			// Create ShardManager with initial shards
+			// First create with 5 shards manually
 			const newDirPath = path.join(testDirPath, "rebalance_decrease");
-			const shardMgr = await ShardManager.init(
+			let shardMgr = await ShardManager.init(
 				fileAdapter,
 				newDirPath,
 				testSchema,
-				initialShards,
 				"english"
 			);
+
+			// Rebalance to 5 shards first
+			await shardMgr.rebalance(5);
+			expect(shardMgr.numOfShards).toBe(5);
 
 			// Insert test documents into shards
 			for (const doc of testDocuments) {
@@ -232,33 +254,34 @@ describe("ShardManager", () => {
 		});
 
 		it("should handle rebalancing to the same number of shards (no-op)", async () => {
-			const numOfShards = 3;
-
-			// Create ShardManager
+			// Create ShardManager with default 1 shard
 			const newDirPath = path.join(testDirPath, "rebalance_noop");
 			const shardMgr = await ShardManager.init(
 				fileAdapter,
 				newDirPath,
 				testSchema,
-				numOfShards,
 				"english"
 			);
+
+			// First rebalance to 3 shards
+			await shardMgr.rebalance(3);
+			const currentShards = 3;
+			expect(shardMgr.numOfShards).toBe(currentShards);
 
 			const persistShardSpy = vi.spyOn(shardMgr, "persistShard");
 
 			// Rebalance to the same number of shards
-			await shardMgr.rebalance(numOfShards);
+			await shardMgr.rebalance(currentShards);
 
-			expect(shardMgr.numOfShards).toBe(numOfShards);
+			expect(shardMgr.numOfShards).toBe(currentShards);
 			expect(persistShardSpy).not.toHaveBeenCalled();
 		});
 
 		describe("autoRebalance method", () => {
 			it("should scale out when shard sizes exceed 500MB", async () => {
-				const initialShards = 2;
-				const expectedShards = 4; // Double the shards to halve the size per shard
+				const expectedShards = 2; // Double the default 1 shard
 
-				// Create ShardManager with initial shards
+				// Create ShardManager with default 1 shard
 				const newDirPath = path.join(
 					testDirPath,
 					"rebalance_scale_out"
@@ -267,7 +290,6 @@ describe("ShardManager", () => {
 					fileAdapter,
 					newDirPath,
 					testSchema,
-					initialShards,
 					"english"
 				);
 
@@ -282,10 +304,8 @@ describe("ShardManager", () => {
 					};
 				});
 
-				// Spy on the rebalance method
 				const rebalanceSpy = vi.spyOn(shardMgr, "rebalance");
 
-				// Call autoRebalance
 				await shardMgr.autoRebalance();
 
 				// Should have called rebalance with double the shards
@@ -294,18 +314,20 @@ describe("ShardManager", () => {
 			});
 
 			it("should scale in when there are too many small shards", async () => {
-				const initialShards = 8;
-				const expectedShards = 4; // Halve the shards if they're too small
+				const expectedShards = 4; // Halve from 8 shards
 
-				// Create ShardManager with initial shards
+				// Create ShardManager and then manually set to 8 shards
 				const newDirPath = path.join(testDirPath, "rebalance_scale_in");
 				const shardMgr = await ShardManager.init(
 					fileAdapter,
 					newDirPath,
 					testSchema,
-					initialShards,
 					"english"
 				);
+
+				// Set to 8 shards first
+				await shardMgr.rebalance(8);
+				expect(shardMgr.numOfShards).toBe(8);
 
 				// Mock small file sizes (80MB total, ~10MB per shard)
 				const statSpy = vi.spyOn(fileAdapter, "stat");
@@ -317,10 +339,8 @@ describe("ShardManager", () => {
 					};
 				});
 
-				// Spy on the rebalance method
 				const rebalanceSpy = vi.spyOn(shardMgr, "rebalance");
 
-				// Call autoRebalance
 				await shardMgr.autoRebalance();
 
 				// Should have called rebalance to reduce shards
@@ -329,17 +349,19 @@ describe("ShardManager", () => {
 			});
 
 			it("should not rebalance when shard sizes are optimal", async () => {
-				const initialShards = 4;
-
-				// Create ShardManager with initial shards
+				// Create ShardManager and then set to 4 shards
 				const newDirPath = path.join(testDirPath, "rebalance_optimal");
 				const shardMgr = await ShardManager.init(
 					fileAdapter,
 					newDirPath,
 					testSchema,
-					initialShards,
 					"english"
 				);
+
+				// Set to 4 shards first
+				await shardMgr.rebalance(4);
+				const optimalShards = 4;
+				expect(shardMgr.numOfShards).toBe(optimalShards);
 
 				// Mock optimal file sizes (1GB total, 250MB per shard)
 				const statSpy = vi.spyOn(fileAdapter, "stat");
@@ -351,15 +373,13 @@ describe("ShardManager", () => {
 					};
 				});
 
-				// Spy on the rebalance method
 				const rebalanceSpy = vi.spyOn(shardMgr, "rebalance");
 
-				// Call autoRebalance
 				await shardMgr.autoRebalance();
 
 				// Should not have called rebalance as size is optimal
 				expect(rebalanceSpy).not.toHaveBeenCalled();
-				expect(shardMgr.numOfShards).toBe(initialShards);
+				expect(shardMgr.numOfShards).toBe(optimalShards);
 			});
 		});
 	});

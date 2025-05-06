@@ -107,17 +107,23 @@ describe("DocumentRepository", () => {
 	});
 
 	describe("Creating a new partitioned database", () => {
-		it("should create the specified number of database shards", async () => {
-			const numOfShards = 5;
+		it("should create a default database shard and then rebalance to specified number", async () => {
+			const desiredShards = 5;
 			const config = {
 				dirPath: testDirPath,
-				numOfShards,
 				schema: testSchema,
 			};
 
 			const docRepo = await DocumentRepository.init(fileAdapter, config);
 
-			for (let i = 0; i < numOfShards; i++) {
+			// Verify we start with 1 shard by default
+			expect(docRepo["shardMgr"]["numOfShards"]).toBe(1);
+
+			// Manually rebalance to desired number of shards
+			await docRepo["shardMgr"].rebalance(desiredShards);
+			expect(docRepo["shardMgr"]["numOfShards"]).toBe(desiredShards);
+
+			for (let i = 0; i < desiredShards; i++) {
 				const shard = await docRepo["shardMgr"]["getShard"](i);
 				expect(shard).toBeDefined();
 				expect(shard.schema).toEqual(testSchema);
@@ -125,10 +131,9 @@ describe("DocumentRepository", () => {
 		});
 
 		it("should create a database with japanese tokenizer", async () => {
-			const numOfShards = 5;
+			const desiredShards = 5;
 			const config = {
 				dirPath: testDirPath,
-				numOfShards,
 				schema: testSchema,
 			};
 
@@ -138,7 +143,14 @@ describe("DocumentRepository", () => {
 				"japanese"
 			);
 
-			for (let i = 0; i < numOfShards; i++) {
+			// Verify we start with 1 shard by default
+			expect(docRepo["shardMgr"]["numOfShards"]).toBe(1);
+
+			// Manually rebalance to desired number of shards
+			await docRepo["shardMgr"].rebalance(desiredShards);
+			expect(docRepo["shardMgr"]["numOfShards"]).toBe(desiredShards);
+
+			for (let i = 0; i < desiredShards; i++) {
 				const shard = await docRepo["shardMgr"]["getShard"](i);
 				expect(shard).toBeDefined();
 				expect(shard.schema).toEqual(testSchema);
@@ -153,7 +165,6 @@ describe("DocumentRepository", () => {
 			const numOfShards = 5;
 			const config = {
 				dirPath: testDirPath,
-				numOfShards,
 				schema: testSchema,
 			};
 
@@ -172,7 +183,10 @@ describe("DocumentRepository", () => {
 
 			const loadedDb = await DocumentRepository.init(fileAdapter, config);
 
+			// ShardManager should detect the number of shards
+			expect(loadedDb["shardMgr"]["numOfShards"]).toBe(numOfShards);
 			expect(loadedDb).toBeDefined();
+
 			const randomIdx = Math.floor(Math.random() * numOfShards);
 			const shard = await loadedDb["shardMgr"]["getShard"](randomIdx);
 			expect(shard.schema).toEqual(testSchema);
@@ -182,7 +196,6 @@ describe("DocumentRepository", () => {
 			const numOfShards = 5;
 			const config = {
 				dirPath: testDirPath,
-				numOfShards,
 				schema: testSchema,
 			};
 
@@ -210,14 +223,16 @@ describe("DocumentRepository", () => {
 
 	describe("saveMany method", () => {
 		it("should distribute documents to correct partitions and insert them", async () => {
-			const numOfShards = 5;
+			const numOfShards = 3; // Using fewer shards for this test
 			const config = {
 				dirPath: testDirPath,
-				numOfShards,
 				schema: testSchema,
 			};
 
 			const docRepo = await DocumentRepository.init(fileAdapter, config);
+			// Rebalance to desired number of shards
+			await docRepo["shardMgr"].rebalance(numOfShards);
+
 			await docRepo.saveMany(testDocuments);
 
 			let resultDocuments: any[] = [];
@@ -234,14 +249,16 @@ describe("DocumentRepository", () => {
 		});
 
 		it("should remove already existing documents with the same Id and insert new ones(save)", async () => {
-			const numOfShards = 5;
+			const numOfShards = 3; // Using fewer shards for this test
 			const config = {
 				dirPath: testDirPath,
-				numOfShards,
 				schema: testSchema,
 			};
 
 			const docRepo = await DocumentRepository.init(fileAdapter, config);
+			// Rebalance to desired number of shards
+			await docRepo["shardMgr"].rebalance(numOfShards);
+
 			await docRepo.saveMany(testDocuments);
 
 			const newDocuments = [
@@ -292,15 +309,17 @@ describe("DocumentRepository", () => {
 
 	describe("search method", () => {
 		it("should search across all shards and return top k results ordered by score", async () => {
-			const numOfShards = 5;
+			const numOfShards = 3; // Using fewer shards for this test
 			const config = {
 				dirPath: testDirPath,
-				numOfShards,
 				schema: testSchema,
 			};
 			const documents = JSON.parse(JSON.stringify(testDocuments));
 
 			const docRepo = await DocumentRepository.init(fileAdapter, config);
+			// Rebalance to desired number of shards
+			await docRepo["shardMgr"].rebalance(numOfShards);
+
 			await docRepo.saveMany(documents);
 
 			// Query vector along Z axis direction
@@ -316,15 +335,17 @@ describe("DocumentRepository", () => {
 		});
 
 		it("should respect the filter parameter when searching", async () => {
-			const numOfShards = 5;
+			const numOfShards = 3; // Using fewer shards for this test
 			const config = {
 				dirPath: testDirPath,
-				numOfShards,
 				schema: testSchema,
 			};
 			const documents = JSON.parse(JSON.stringify(testDocuments));
 
 			const docRepo = await DocumentRepository.init(fileAdapter, config);
+			// Rebalance to desired number of shards
+			await docRepo["shardMgr"].rebalance(numOfShards);
+
 			await docRepo.saveMany(documents);
 
 			const queryVector = [0.6, 0.7, 0.8];

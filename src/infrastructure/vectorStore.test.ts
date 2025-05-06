@@ -70,7 +70,6 @@ describe("OramaStore", () => {
 
 			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
-				numOfShards: 1,
 				file,
 			});
 
@@ -84,7 +83,6 @@ describe("OramaStore", () => {
 
 			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
-				numOfShards: 1,
 				file,
 			});
 
@@ -104,11 +102,13 @@ describe("OramaStore", () => {
 			const SHARDS = 3;
 			const mockEmbeddingDimensions = 128;
 			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
-			await OramaStore.init(mockEmbeddings, {
+			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
-				numOfShards: SHARDS,
 				file,
 			});
+
+			const shardMgr = (store as any).db["shardMgr"];
+			await shardMgr.rebalance(SHARDS);
 
 			for (let i = 0; i < SHARDS; i++) {
 				expect(fs.existsSync(testDbFilePath(i + 1))).toBe(true);
@@ -149,7 +149,6 @@ describe("OramaStore", () => {
 
 			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
-				numOfShards: 1,
 				file,
 			});
 
@@ -175,7 +174,6 @@ describe("OramaStore", () => {
 
 			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
-				numOfShards: 1,
 				file,
 			});
 
@@ -234,7 +232,6 @@ describe("OramaStore", () => {
 
 			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
-				numOfShards: 1,
 				file,
 			});
 
@@ -272,7 +269,6 @@ describe("OramaStore", () => {
 
 			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
-				numOfShards: 1,
 				file,
 			});
 
@@ -345,7 +341,6 @@ describe("OramaStore", () => {
 
 			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
-				numOfShards: 1,
 				file,
 			});
 
@@ -431,7 +426,6 @@ describe("OramaStore", () => {
 
 			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
-				numOfShards: 1,
 				file,
 			});
 
@@ -520,7 +514,6 @@ describe("OramaStore", () => {
 
 			const store = await OramaStore.init(mockEmbeddings, {
 				dirPath: testDbPath,
-				numOfShards: 1,
 				file,
 			});
 
