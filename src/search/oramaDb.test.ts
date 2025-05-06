@@ -3,7 +3,7 @@ import { OramaDb } from "./oramaDb.js";
 import { storeFilename } from "./shardManager.js";
 import * as path from "path";
 import * as fs from "fs";
-import { AnySchema, create, search, count } from "@orama/orama";
+import { AnySchema, create, search } from "@orama/orama";
 import { persist, restore } from "@orama/plugin-data-persistence";
 
 describe("OramaDb", () => {

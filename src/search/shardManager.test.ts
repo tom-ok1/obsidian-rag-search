@@ -2,9 +2,8 @@ import { localFile } from "../utils/LocalFile.js";
 import { ShardManager, storeFilename } from "./shardManager.js";
 import * as path from "path";
 import * as fs from "fs";
-import { AnySchema, create, search, count } from "@orama/orama";
-import { HashRing } from "./hashring.js";
-import { persist, restore } from "@orama/plugin-data-persistence";
+import { AnySchema, create } from "@orama/orama";
+import { persist } from "@orama/plugin-data-persistence";
 
 describe("ShardManager", () => {
 	const fileAdapter = new localFile();
