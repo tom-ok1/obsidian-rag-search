@@ -22,14 +22,14 @@ export { storeFilename } from "./shardManager.js";
  * @param numOfShards - Number of shards to create for the database
  * @param schema - Schema definition for the database
  */
-interface OramaDbConfig<T extends AnySchema> {
+interface DbConfig<T extends AnySchema> {
 	dirPath: string;
 	numOfShards: number;
 	schema: T;
 }
 
 /**
- * OramaDb manages partitioned Orama databases
+ * DocumentRepository manages partitioned Orama databases
  */
 export class DocumentRepository<T extends AnySchema> {
 	private shardMgr: ShardManager<T>;
@@ -40,7 +40,7 @@ export class DocumentRepository<T extends AnySchema> {
 
 	static async init<T extends AnySchema>(
 		fileAdapter: FileAdapter,
-		config: OramaDbConfig<T>,
+		config: DbConfig<T>,
 		language = "english"
 	) {
 		const shardMgr = await ShardManager.init(

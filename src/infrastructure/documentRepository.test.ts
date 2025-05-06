@@ -6,7 +6,7 @@ import * as fs from "fs";
 import { AnySchema, create, search } from "@orama/orama";
 import { persist, restore } from "@orama/plugin-data-persistence";
 
-describe("OramaDb", () => {
+describe("DocumentRepository", () => {
 	const fileAdapter = new localFile();
 	const testDirPath = path.join(__dirname, "test_db");
 	const testSchema = {
@@ -115,10 +115,10 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			const oramadb = await DocumentRepository.init(fileAdapter, config);
+			const docRepo = await DocumentRepository.init(fileAdapter, config);
 
 			for (let i = 0; i < numOfShards; i++) {
-				const shard = await oramadb["shardMgr"]["getShard"](i);
+				const shard = await docRepo["shardMgr"]["getShard"](i);
 				expect(shard).toBeDefined();
 				expect(shard.schema).toEqual(testSchema);
 			}
@@ -132,17 +132,17 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			const oramadb = await DocumentRepository.init(
+			const docRepo = await DocumentRepository.init(
 				fileAdapter,
 				config,
 				"japanese"
 			);
 
 			for (let i = 0; i < numOfShards; i++) {
-				const shard = await oramadb["shardMgr"]["getShard"](i);
+				const shard = await docRepo["shardMgr"]["getShard"](i);
 				expect(shard).toBeDefined();
 				expect(shard.schema).toEqual(testSchema);
-				// Check language through OramaDb class since we can't directly check binary data
+				// Check language through docRepo class since we can't directly check binary data
 				expect(shard.tokenizer.language).toBe("japanese");
 			}
 		});
@@ -217,8 +217,8 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			const oramaDb = await DocumentRepository.init(fileAdapter, config);
-			await oramaDb.saveMany(testDocuments);
+			const docRepo = await DocumentRepository.init(fileAdapter, config);
+			await docRepo.saveMany(testDocuments);
 
 			let resultDocuments: any[] = [];
 
@@ -241,8 +241,8 @@ describe("OramaDb", () => {
 				schema: testSchema,
 			};
 
-			const oramaDb = await DocumentRepository.init(fileAdapter, config);
-			await oramaDb.saveMany(testDocuments);
+			const docRepo = await DocumentRepository.init(fileAdapter, config);
+			await docRepo.saveMany(testDocuments);
 
 			const newDocuments = [
 				{
@@ -257,7 +257,7 @@ describe("OramaDb", () => {
 				},
 			];
 
-			await oramaDb.saveMany(newDocuments);
+			await docRepo.saveMany(newDocuments);
 
 			let resultDocuments: any[] = [];
 
@@ -300,14 +300,14 @@ describe("OramaDb", () => {
 			};
 			const documents = JSON.parse(JSON.stringify(testDocuments));
 
-			const oramaDb = await DocumentRepository.init(fileAdapter, config);
-			await oramaDb.saveMany(documents);
+			const docRepo = await DocumentRepository.init(fileAdapter, config);
+			await docRepo.saveMany(documents);
 
 			// Query vector along Z axis direction
 			const queryVector = [0, 0, 1];
 			const k = 3;
 
-			const results = await oramaDb.search(queryVector, { k });
+			const results = await docRepo.search(queryVector, { k });
 			expect(results.length).toBeLessThanOrEqual(k);
 			expect(results[0].id).toBe("docZ");
 			expect(results[1].id).toBe("docZ2");
@@ -324,14 +324,14 @@ describe("OramaDb", () => {
 			};
 			const documents = JSON.parse(JSON.stringify(testDocuments));
 
-			const oramaDb = await DocumentRepository.init(fileAdapter, config);
-			await oramaDb.saveMany(documents);
+			const docRepo = await DocumentRepository.init(fileAdapter, config);
+			await docRepo.saveMany(documents);
 
 			const queryVector = [0.6, 0.7, 0.8];
 			const k = 5;
 
 			// Execute search with filter
-			const results = await oramaDb.search(queryVector, {
+			const results = await docRepo.search(queryVector, {
 				k,
 				filter: { content: "close to" },
 			});
