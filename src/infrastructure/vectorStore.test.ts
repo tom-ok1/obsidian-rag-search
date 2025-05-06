@@ -1,4 +1,8 @@
-import { MarkDownDoc, MdDocRawSchema, OramaStore } from "./vectorStore.js";
+import {
+	MarkDownDoc,
+	MdDocRawSchema,
+	OramaStore,
+} from "../search/vectorStore.js";
 import { Embeddings } from "@langchain/core/embeddings";
 import * as fs from "fs";
 import * as path from "path";

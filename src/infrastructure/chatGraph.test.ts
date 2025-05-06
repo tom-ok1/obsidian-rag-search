@@ -1,8 +1,4 @@
-import {
-	createChatGraph,
-	type ChatMessage,
-	MAX_RETRIES,
-} from "./createChatGraph.js";
+import { createChatGraph, type ChatMessage, MAX_RETRIES } from "./chatGraph.js";
 import { Document } from "@langchain/core/documents";
 import type { VectorStore } from "@langchain/core/vectorstores";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";

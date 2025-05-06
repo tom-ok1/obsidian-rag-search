@@ -1,7 +1,7 @@
 import { FileAdapter } from "src/utils/fileAdapter.js";
-import { OramaStore } from "./vectorStore.js";
-import { ChatMessage, createChatGraph } from "./createChatGraph.js";
-import { MarkdownProcessor } from "./markdownProcessor.js";
+import { OramaStore } from "../infrastructure/vectorStore.js";
+import { ChatMessage, createChatGraph } from "../infrastructure/chatGraph.js";
+import { MarkdownProcessor } from "../infrastructure/markdownProcessor.js";
 
 type ChatGraph = ReturnType<typeof createChatGraph>;
 

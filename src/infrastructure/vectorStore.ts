@@ -11,7 +11,7 @@ import { EmbeddingsInterface } from "@langchain/core/embeddings";
 import { InternalTypedDocument, Schema, WhereCondition } from "@orama/orama";
 import { FileAdapter } from "../utils/fileAdapter.js";
 import { OramaDb } from "./oramaDb.js";
-import { MdDocMetadata } from "src/search/markdownProcessor.js";
+import { MdDocMetadata } from "src/infrastructure/markdownProcessor.js";
 import { Callbacks } from "@langchain/core/callbacks/manager";
 
 export type MdDocRawSchema = Awaited<ReturnType<OramaStore["documentSchema"]>>;

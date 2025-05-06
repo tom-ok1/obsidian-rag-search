@@ -8,8 +8,8 @@ import {
 	remove,
 } from "@orama/orama";
 import { persist, restore } from "@orama/plugin-data-persistence";
-import { HashRing } from "./hashring.js";
-import { LRU } from "./LRU.js";
+import { HashRing } from "../utils/hashring.js";
+import { LRU } from "../utils/LRU.js";
 import { createTokenizer } from "@orama/tokenizers/japanese";
 import { stopwords as japaneseStopwords } from "@orama/stopwords/japanese";
 
