@@ -17,6 +17,9 @@ importers:
       '@emotion/styled':
         specifier: ^11.14.0
         version: 11.14.0(@emotion/react@11.14.0(@types/react@19.1.2)(react@19.1.0))(@types/react@19.1.2)(react@19.1.0)
+      '@langchain/google-common':
+        specifier: ^0.2.6
+        version: 0.2.6(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3)
       '@langchain/google-genai':
         specifier: ^0.2.5
         version: 0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3)
@@ -56,12 +59,21 @@ importers:
       framer-motion:
         specifier: ^12.9.4
         version: 12.9.4(@emotion/is-prop-valid@1.3.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      gaxios:
+        specifier: ^6.7.1
+        version: 6.7.1
+      google-auth-library:
+        specifier: ^9.15.1
+        version: 9.15.1
       langchain:
         specifier: ^0.3.24
-        version: 0.3.24(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(@langchain/google-genai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(axios@1.9.0)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(ws@8.18.1)
+        version: 0.3.24(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(@langchain/google-genai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai-web@0.2.6(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(axios@1.9.0)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(ws@8.18.1)
       lucide-react:
         specifier: ^0.507.0
         version: 0.507.0(react@19.1.0)
+      node-fetch:
+        specifier: ^3.3.2
+        version: 3.3.2
       react:
         specifier: ^19.1.0
         version: 19.1.0
@@ -74,7 +86,7 @@ importers:
     devDependencies:
       '@langchain/community':
         specifier: ^0.3.41
-        version: 0.3.41(@browserbasehq/sdk@2.5.0)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.52.0)(deepmerge@4.3.1)(dotenv@16.5.0)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(zod@3.24.3))(@ibm-cloud/watsonx-ai@1.6.4(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3))))(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(@langchain/google-genai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(axios@1.9.0)(crypto-js@4.2.0)(google-auth-library@9.15.1)(ibm-cloud-sdk-core@5.3.2)(ignore@5.3.2)(jsonwebtoken@9.0.2)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(pdf-parse@1.1.1)(playwright@1.52.0)(ws@8.18.1)
+        version: 0.3.41(@browserbasehq/sdk@2.5.0)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.52.0)(deepmerge@4.3.1)(dotenv@16.5.0)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(zod@3.24.3))(@ibm-cloud/watsonx-ai@1.6.4(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3))))(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(@langchain/google-genai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai-web@0.2.6(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(axios@1.9.0)(crypto-js@4.2.0)(google-auth-library@9.15.1)(ibm-cloud-sdk-core@5.3.2)(ignore@5.3.2)(jsonwebtoken@9.0.2)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(pdf-parse@1.1.1)(playwright@1.52.0)(web-auth-library@1.0.3)(ws@8.18.1)
       '@langchain/core':
         specifier: ^0.3.49
         version: 0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3))
@@ -899,8 +911,8 @@ packages:
     resolution: {integrity: sha512-ESEbxjtVtZTpgMPrLFEQZVHA5EVJuDYV3XzTFQ8haPHmBJfzskl6TINFttoGKTGbv799DZrRwnd5fbuCN5NDEA==}
     engines: {node: '>=18'}
 
-  '@langchain/google-common@0.2.5':
-    resolution: {integrity: sha512-KY6WqPD1pEiSOq8KoXYwrwcCU0vWfHyOe+qgkiJ/1K8adxC2cqysMCQnBrIb1wfW+XiUR6GojC2lhQNuibosTA==}
+  '@langchain/google-common@0.2.6':
+    resolution: {integrity: sha512-lVcFU3gifTVxwpXm6TWAYl3IcF2h/MBcMxyHV75dyNXkoXK3wrXrCuVzRTBbvKE1/lf+Cdy21C0zZMAxzrOq+g==}
     engines: {node: '>=18'}
     peerDependencies:
       '@langchain/core': '>=0.3.48 <0.4.0'
@@ -917,11 +929,23 @@ packages:
     peerDependencies:
       '@langchain/core': '>=0.3.48 <0.4.0'
 
+  '@langchain/google-vertexai-web@0.2.6':
+    resolution: {integrity: sha512-/FTagxZwot5zcpAhste4Yv8fbwVEx7RKw9qZP+A9z2YWDLkTEh1UpT72kX83XJ6jKm7FH83ldywd0yRyn32CkA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@langchain/core': '>=0.3.48 <0.4.0'
+
   '@langchain/google-vertexai@0.2.5':
     resolution: {integrity: sha512-RAeRPvny4LUu0YeHjITB7ZcF1jsdgn34QhXldf14ySg+03WB1tKIRNed9eTY7JxAZiRjCKNIn+92mGGR+iavLg==}
     engines: {node: '>=18'}
     peerDependencies:
       '@langchain/core': '>=0.3.48 <0.4.0'
+
+  '@langchain/google-webauth@0.2.6':
+    resolution: {integrity: sha512-H+3orxWfLPGmOOTM4mn6Pyi96I7YSPGpwKWaKnKc4Us+O795dVzY9bqJDf647kPtA0hiAVXG61V205mh69wiNA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@langchain/core': '>=0.2.21 <0.4.0'
 
   '@langchain/langgraph-checkpoint@0.0.17':
     resolution: {integrity: sha512-6b3CuVVYx+7x0uWLG+7YXz9j2iBa+tn2AXvkLxzEvaAsLE6Sij++8PPbS2BZzC+S/FPJdWsz6I5bsrqL0BYrCA==}
@@ -1682,6 +1706,10 @@ packages:
   csstype@3.1.3:
     resolution: {integrity: sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==}
 
+  data-uri-to-buffer@4.0.1:
+    resolution: {integrity: sha512-0R9ikRb668HB7QDxT1vkpuUBtqc53YyAwMwGeUFKRojY/NWKvdZ+9UYtRfGmhqNbRkTSVpMbmyhXipFFv2cb/A==}
+    engines: {node: '>= 12'}
+
   debug@3.2.7:
     resolution: {integrity: sha512-CFjzYYAi4ThfiQvizrFQevTTXHtnCqWfe7x1AhgEscTz6ZbLbfoLRLPugTQyBth6f8ZERVUSyWHFD/7Wu4t1XQ==}
     peerDependencies:
@@ -1935,6 +1963,10 @@ packages:
       picomatch:
         optional: true
 
+  fetch-blob@3.2.0:
+    resolution: {integrity: sha512-7yAQpD2UMJzLi1Dqv7qFYnPbaPx7ZfFK6PiIxQ4PfkGPyNyl2Ugx+a/umUonmKqjhM4DnfbMvdX6otXq83soQQ==}
+    engines: {node: ^12.20 || >= 14.13}
+
   file-entry-cache@6.0.1:
     resolution: {integrity: sha512-7Gps/XWymbLk2QLYK4NzpMOrYjMhdIxXuIvy2QBsLE6ljuodKvdkWs/cpyJJ3CVIVpH0Oi1Hvg1ovbMzLdFBBg==}
     engines: {node: ^10.12.0 || >=12.0.0}
@@ -1988,6 +2020,10 @@ packages:
   formdata-node@4.4.1:
     resolution: {integrity: sha512-0iirZp3uVDjVGt9p49aTaqjk84TrglENEDuqfdlZQ1roC9CWlPk6Avf8EEnZNcAqPonwkG35x4n3ww/1THYAeQ==}
     engines: {node: '>= 12.20'}
+
+  formdata-polyfill@4.0.10:
+    resolution: {integrity: sha512-buewHzMvYL29jdeQTVILecSaZKnt/RJWjoZCF5OW60Z67/GmSLBkOFM7qh1PI3zFNtJbaZL5eQu1vLfazOwj4g==}
+    engines: {node: '>=12.20.0'}
 
   framer-motion@12.9.4:
     resolution: {integrity: sha512-yaeGDmGQ3eCQEwZ95/pRQMaSh/Q4E2CK6JYOclG/PdjyQad0MULJ+JFVV8911Fl5a6tF6o0wgW8Dpl5Qx4Adjg==}
@@ -2206,6 +2242,9 @@ packages:
   jiti@2.4.2:
     resolution: {integrity: sha512-rg9zJN+G4n2nfJl5MW3BMygZX56zKPNVEYYqq7adpmMh4Jn2QNEwhvQlFy6jPVdcod7txZtKHWnyZiA3a0zP7A==}
     hasBin: true
+
+  jose@4.15.9:
+    resolution: {integrity: sha512-1vUQX+IdDMVPj4k8kOxgUqlcK518yluMuGZwqlr44FS1ppZB/5GWh4rZG89erpOBOJjU/OBsnCVFfapsRz6nEA==}
 
   js-tiktoken@1.0.20:
     resolution: {integrity: sha512-Xlaqhhs8VfCd6Sh7a1cFkZHQbYTLCwVJJWiHVxBYzLPxW0XsoxBy1hitmjkdIjD3Aon5BXLHFwU5O8WUx6HH+A==}
@@ -2539,6 +2578,10 @@ packages:
       encoding:
         optional: true
 
+  node-fetch@3.3.2:
+    resolution: {integrity: sha512-dRB78srN/l6gqWulah9SrxeYnxeddIG30+GOqK/9OlLVyLg3HPnr6SqOWTWOXKRwC2eGYCkZ59NNuSgvSrpgOA==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+
   node-releases@2.0.19:
     resolution: {integrity: sha512-xxOWJsBKtzAq7DY0J+DTzuz58K8e7sJbdgwkbMWQe8UYB6ekmsQ45q0M/tJDsGaZmbC+l7n57UV8Hl5tHxO9uw==}
 
@@ -2786,6 +2829,9 @@ packages:
   reusify@1.1.0:
     resolution: {integrity: sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw==}
     engines: {iojs: '>=1.0.0', node: '>=0.10.0'}
+
+  rfc4648@1.5.4:
+    resolution: {integrity: sha512-rRg/6Lb+IGfJqO05HZkN50UtY7K/JhxJag1kP23+zyMfrvoB0B7RWv06MbOzoc79RgCdNTiUaNsTT1AJZ7Z+cg==}
 
   rimraf@3.0.2:
     resolution: {integrity: sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA==}
@@ -3108,6 +3154,13 @@ packages:
 
   w3c-keyname@2.2.8:
     resolution: {integrity: sha512-dpojBhNsCNN7T82Tm7k26A6G9ML3NkhDsnw9n/eoxSRlVBB4CEtIQ/KTCLI2Fwf3ataSXRhYFkQi3SlnFwPvPQ==}
+
+  web-auth-library@1.0.3:
+    resolution: {integrity: sha512-fBmEjJSrbmbD9EREwVlewyfSVkb3IzgTXEF0fzXo3miDywsxES1vwG4aJGNpuSSUorZAGBJNyyz5VFq2VFgudw==}
+
+  web-streams-polyfill@3.3.3:
+    resolution: {integrity: sha512-d2JWLCivmZYTSIoge9MsgFCZrt571BikcWGYkjC1khllbTeDlGqZ2D8vD8E/lJa8WGWbb7Plm8/XJYV7IJHZZw==}
+    engines: {node: '>= 8'}
 
   web-streams-polyfill@4.0.0-beta.3:
     resolution: {integrity: sha512-QW95TCTaHmsYfHDybGMwO5IJIM93I/6vTRk+daHTWFPhwh+C8Cg7j7XyKrwrj8Ib6vYXe0ocYNrmzY4xAAN6ug==}
@@ -3595,7 +3648,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@langchain/community@0.3.41(@browserbasehq/sdk@2.5.0)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.52.0)(deepmerge@4.3.1)(dotenv@16.5.0)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(zod@3.24.3))(@ibm-cloud/watsonx-ai@1.6.4(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3))))(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(@langchain/google-genai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(axios@1.9.0)(crypto-js@4.2.0)(google-auth-library@9.15.1)(ibm-cloud-sdk-core@5.3.2)(ignore@5.3.2)(jsonwebtoken@9.0.2)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(pdf-parse@1.1.1)(playwright@1.52.0)(ws@8.18.1)':
+  '@langchain/community@0.3.41(@browserbasehq/sdk@2.5.0)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.52.0)(deepmerge@4.3.1)(dotenv@16.5.0)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(zod@3.24.3))(@ibm-cloud/watsonx-ai@1.6.4(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3))))(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(@langchain/google-genai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai-web@0.2.6(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(axios@1.9.0)(crypto-js@4.2.0)(google-auth-library@9.15.1)(ibm-cloud-sdk-core@5.3.2)(ignore@5.3.2)(jsonwebtoken@9.0.2)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(pdf-parse@1.1.1)(playwright@1.52.0)(web-auth-library@1.0.3)(ws@8.18.1)':
     dependencies:
       '@browserbasehq/stagehand': 1.14.0(@playwright/test@1.52.0)(deepmerge@4.3.1)(dotenv@16.5.0)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(zod@3.24.3)
       '@ibm-cloud/watsonx-ai': 1.6.4(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))
@@ -3606,7 +3659,7 @@ snapshots:
       flat: 5.0.2
       ibm-cloud-sdk-core: 5.3.2
       js-yaml: 4.1.0
-      langchain: 0.3.24(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(@langchain/google-genai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(axios@1.9.0)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(ws@8.18.1)
+      langchain: 0.3.24(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(@langchain/google-genai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai-web@0.2.6(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(axios@1.9.0)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(ws@8.18.1)
       langsmith: 0.3.21(openai@4.96.0(ws@8.18.1)(zod@3.24.3))
       openai: 4.96.0(ws@8.18.1)(zod@3.24.3)
       uuid: 10.0.0
@@ -3620,6 +3673,7 @@ snapshots:
       jsonwebtoken: 9.0.2
       pdf-parse: 1.1.1
       playwright: 1.52.0
+      web-auth-library: 1.0.3
       ws: 8.18.1
     transitivePeerDependencies:
       - '@langchain/anthropic'
@@ -3656,7 +3710,7 @@ snapshots:
     transitivePeerDependencies:
       - openai
 
-  '@langchain/google-common@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3)':
+  '@langchain/google-common@0.2.6(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3)':
     dependencies:
       '@langchain/core': 0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3))
       uuid: 10.0.0
@@ -3667,7 +3721,7 @@ snapshots:
   '@langchain/google-gauth@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3)':
     dependencies:
       '@langchain/core': 0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3))
-      '@langchain/google-common': 0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3)
+      '@langchain/google-common': 0.2.6(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3)
       google-auth-library: 9.15.1
     transitivePeerDependencies:
       - encoding
@@ -3683,6 +3737,14 @@ snapshots:
     transitivePeerDependencies:
       - zod
 
+  '@langchain/google-vertexai-web@0.2.6(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3)':
+    dependencies:
+      '@langchain/core': 0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3))
+      '@langchain/google-webauth': 0.2.6(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3)
+    transitivePeerDependencies:
+      - zod
+    optional: true
+
   '@langchain/google-vertexai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3)':
     dependencies:
       '@langchain/core': 0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3))
@@ -3691,6 +3753,15 @@ snapshots:
       - encoding
       - supports-color
       - zod
+
+  '@langchain/google-webauth@0.2.6(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3)':
+    dependencies:
+      '@langchain/core': 0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3))
+      '@langchain/google-common': 0.2.6(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3)
+      web-auth-library: 1.0.3
+    transitivePeerDependencies:
+      - zod
+    optional: true
 
   '@langchain/langgraph-checkpoint@0.0.17(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))':
     dependencies:
@@ -4413,6 +4484,8 @@ snapshots:
 
   csstype@3.1.3: {}
 
+  data-uri-to-buffer@4.0.1: {}
+
   debug@3.2.7:
     dependencies:
       ms: 2.1.3
@@ -4697,6 +4770,11 @@ snapshots:
     optionalDependencies:
       picomatch: 4.0.2
 
+  fetch-blob@3.2.0:
+    dependencies:
+      node-domexception: 1.0.0
+      web-streams-polyfill: 3.3.3
+
   file-entry-cache@6.0.1:
     dependencies:
       flat-cache: 3.2.0
@@ -4751,6 +4829,10 @@ snapshots:
     dependencies:
       node-domexception: 1.0.0
       web-streams-polyfill: 4.0.0-beta.3
+
+  formdata-polyfill@4.0.10:
+    dependencies:
+      fetch-blob: 3.2.0
 
   framer-motion@12.9.4(@emotion/is-prop-valid@1.3.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
     dependencies:
@@ -5015,6 +5097,9 @@ snapshots:
 
   jiti@2.4.2: {}
 
+  jose@4.15.9:
+    optional: true
+
   js-tiktoken@1.0.20:
     dependencies:
       base64-js: 1.5.1
@@ -5089,7 +5174,7 @@ snapshots:
     dependencies:
       json-buffer: 3.0.1
 
-  langchain@0.3.24(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(@langchain/google-genai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(axios@1.9.0)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(ws@8.18.1):
+  langchain@0.3.24(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(@langchain/google-genai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai-web@0.2.6(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(axios@1.9.0)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(ws@8.18.1):
     dependencies:
       '@langchain/core': 0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3))
       '@langchain/openai': 0.5.7(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(ws@8.18.1)
@@ -5107,6 +5192,7 @@ snapshots:
     optionalDependencies:
       '@langchain/google-genai': 0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3)
       '@langchain/google-vertexai': 0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3)
+      '@langchain/google-vertexai-web': 0.2.6(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3)
       axios: 1.9.0(debug@4.4.0)
     transitivePeerDependencies:
       - encoding
@@ -5273,6 +5359,12 @@ snapshots:
   node-fetch@2.7.0:
     dependencies:
       whatwg-url: 5.0.0
+
+  node-fetch@3.3.2:
+    dependencies:
+      data-uri-to-buffer: 4.0.1
+      fetch-blob: 3.2.0
+      formdata-polyfill: 4.0.10
 
   node-releases@2.0.19: {}
 
@@ -5493,6 +5585,9 @@ snapshots:
   retry@0.13.1: {}
 
   reusify@1.1.0: {}
+
+  rfc4648@1.5.4:
+    optional: true
 
   rimraf@3.0.2:
     dependencies:
@@ -5801,6 +5896,14 @@ snapshots:
       - yaml
 
   w3c-keyname@2.2.8: {}
+
+  web-auth-library@1.0.3:
+    dependencies:
+      jose: 4.15.9
+      rfc4648: 1.5.4
+    optional: true
+
+  web-streams-polyfill@3.3.3: {}
 
   web-streams-polyfill@4.0.0-beta.3: {}
 

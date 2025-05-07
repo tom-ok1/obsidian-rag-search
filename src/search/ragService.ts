@@ -2,10 +2,21 @@ import { FileAdapter } from "src/utils/fileAdapter.js";
 import { OramaStore } from "../infrastructure/vectorStore.js";
 import { ChatMessage, createChatGraph } from "../infrastructure/chatGraph.js";
 import { MarkdownProcessor } from "../infrastructure/markdownProcessor.js";
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import { EmbeddingsInterface } from "@langchain/core/embeddings";
 
 type ChatGraph = ReturnType<typeof createChatGraph>;
+/**
+ * @param dirPath - Directory path to store the database files
+ * @param file - File adapter for file operations
+ * @param language - Language for the database, defaults to "english", japanese tokenizer is used if language is "japanese"
+ */
+type RagConfig = {
+	dirPath: string;
+	language?: string;
+};
 
-export class ChatService {
+export class RagService {
 	private history: ChatMessage[] = [];
 
 	private constructor(
@@ -15,42 +26,21 @@ export class ChatService {
 	) {}
 
 	static async create(params: {
+		model: BaseChatModel;
+		embeddings: EmbeddingsInterface;
 		file: FileAdapter;
-		dirPath: string;
-		numOfShards: number;
-		language?: string;
+		config: RagConfig;
 	}) {
-		const { file, dirPath, numOfShards, language } = params;
-		const { ChatVertexAI, VertexAIEmbeddings } = await import(
-			"@langchain/google-vertexai"
-		);
-
-		const model = new ChatVertexAI({
-			model: "claude-3-5-sonnet-v2@20241022",
-			streaming: true,
-			streamUsage: false,
-			authOptions: {
-				projectId:
-					process.env.GOOGLE_PROJECT_ID || "tomoya-oki-sandbox",
-			},
-		});
-		const embeddings = new VertexAIEmbeddings({
-			model: "text-embedding-004",
-			authOptions: {
-				projectId:
-					process.env.GOOGLE_PROJECT_ID || "tomoya-oki-sandbox",
-			},
-		});
+		const { file, model, embeddings, config } = params;
 
 		const vectorStore = await OramaStore.init(embeddings, {
+			...config,
 			file,
-			dirPath,
 			modelName: model._modelType(),
-			language,
 		});
 		const markdownProcessor = new MarkdownProcessor(file);
 		const chatGraph = createChatGraph(vectorStore, model);
-		return new ChatService(chatGraph, vectorStore, markdownProcessor);
+		return new RagService(chatGraph, vectorStore, markdownProcessor);
 	}
 
 	async search(question: string) {

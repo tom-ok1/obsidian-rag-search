@@ -8,17 +8,18 @@ import {
 	TFile,
 	WorkspaceLeaf,
 } from "obsidian";
-import { ChatService } from "src/search/chatService.js";
+import { RagService } from "src/search/ragService.js";
 import { VaultFile } from "src/utils/VaultFile.js";
-import { corslessFetch } from "src/utils/corslessFetcher.js";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { ChatApp } from "src/components/Chat.js";
-
-globalThis.fetch = corslessFetch;
+import {
+	ObsidianChatVertexAI,
+	ObsidianVertexAIEmbeddings,
+} from "src/api/vertex.js";
 
 export default class MyPlugin extends Plugin {
-	private chat!: ChatService;
+	private chat!: RagService;
 	private readonly STORAGE_KEY = "rag-search-fileMtimeMap";
 
 	async onload() {
@@ -28,12 +29,32 @@ export default class MyPlugin extends Plugin {
 		);
 		this.addSettingTab(new ExampleSettingTab(this.app, this));
 
+		const model = new ObsidianChatVertexAI({
+			model: "claude-3-5-sonnet-v2@20241022",
+			streaming: true,
+			streamUsage: false,
+			authOptions: {
+				projectId:
+					process.env.GOOGLE_PROJECT_ID || "tomoya-oki-sandbox",
+			},
+		});
+		const embeddings = new ObsidianVertexAIEmbeddings({
+			model: "text-embedding-004",
+			authOptions: {
+				projectId:
+					process.env.GOOGLE_PROJECT_ID || "tomoya-oki-sandbox",
+			},
+		});
+
 		const file = new VaultFile(this.app);
-		this.chat = await ChatService.create({
+		this.chat = await RagService.create({
+			model,
+			embeddings,
 			file,
-			dirPath: "test",
-			numOfShards: 1,
-			language: "japanese",
+			config: {
+				dirPath: "test",
+				language: "japanese",
+			},
 		});
 
 		this.addCommand({
@@ -105,7 +126,7 @@ const VIEW_TYPE_CHAT = "rag-chat-react";
 export class ChatView extends ItemView {
 	private root?: ReactDOM.Root;
 
-	constructor(leaf: WorkspaceLeaf, private chat: ChatService) {
+	constructor(leaf: WorkspaceLeaf, private chat: RagService) {
 		super(leaf);
 	}
 	getViewType() {

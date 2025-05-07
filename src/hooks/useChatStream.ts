@@ -1,11 +1,11 @@
 import { useState } from "react";
-import type { ChatService } from "../search/chatService.js";
+import type { RagService } from "../search/ragService.js";
 import { ChatContent } from "../types/messages.js";
 import { MessageContent } from "@langchain/core/messages";
 
 export type { ChatContent as Msg };
 
-export function useChatStream(chatService: ChatService) {
+export function useChatStream(chatService: RagService) {
 	const [messages, setMessages] = useState<ChatContent[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
