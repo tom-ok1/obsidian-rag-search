@@ -26,31 +26,25 @@ export function createChatGraph(
 			),
 		searchType: z
 			.enum(["similarity", "mmr"])
+			.nullable()
 			.default("similarity")
 			.describe(
 				"Search mode: 'similarity' for basic similarity search, 'mmr' for more advanced search using max marginal relevance, which allows for more diverse results."
 			),
-		k: z
-			.number()
-			.min(1)
-			.max(40)
-			.default(15)
-			.describe("Number of documents to return (1–40)."),
+		k: z.number().describe("Number of documents to return (1-40)."),
 		fetchK: z
 			.number()
-			.min(1)
-			.max(100)
+			.nullable()
 			.optional()
 			.describe(
-				"For MMR: number of documents to fetch before re-ranking."
+				"For MMR: number of documents to fetch before re-ranking (1-100). Only needed for MMR search."
 			),
 		lambda: z
 			.number()
-			.min(0)
-			.max(1)
+			.nullable()
 			.optional()
 			.describe(
-				"For MMR: diversity parameter (0 = maximum diversity, 1 = minimum diversity). Optional. default is 0.6."
+				"For MMR: diversity parameter (0 = maximum diversity, 1 = minimum diversity). Only needed for MMR search. Default is 0.6."
 			),
 	});
 
@@ -61,9 +55,10 @@ export function createChatGraph(
 				"Whether the current set of documents sufficiently answers the user's question."
 			),
 		nextParams: searchSchema
+			.nullable()
 			.optional()
 			.describe(
-				"If not enough, the LLM’s suggested updated search parameters for the next retrieval round."
+				"If not enough, the LLM's suggested updated search parameters for the next retrieval round."
 			),
 	});
 

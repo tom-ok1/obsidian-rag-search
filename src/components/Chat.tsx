@@ -13,12 +13,6 @@ export const ChatApp: React.FC<{ chat: RagService }> = ({ chat }) => {
 			<MessageList messages={messages} />
 			<Divider />
 			<ChatInput onSend={ask} loading={isLoading} />
-			<Snackbar
-				open={!!error}
-				message={error}
-				anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-				autoHideDuration={6000}
-			/>
 		</Stack>
 	);
 };
