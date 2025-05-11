@@ -229,7 +229,7 @@ describe("DocumentRepository", () => {
 		});
 	});
 
-	describe("saveMany method", () => {
+	describe("insertMany method", () => {
 		it("should distribute documents to correct partitions and insert them", async () => {
 			const numOfShards = 3; // Using fewer shards for this test
 			const config = {
@@ -241,7 +241,7 @@ describe("DocumentRepository", () => {
 			// Rebalance to desired number of shards
 			await docRepo["shardMgr"].rebalance(numOfShards);
 
-			await docRepo.saveMany(testDocuments);
+			await docRepo.insertMany(testDocuments);
 
 			let resultDocuments: any[] = [];
 
@@ -256,7 +256,7 @@ describe("DocumentRepository", () => {
 			expect(resultDocuments[0].document).toBeDefined();
 		});
 
-		it("should remove already existing documents with the same Id and insert new ones(save)", async () => {
+		it("should insert additional documents into the database", async () => {
 			const numOfShards = 3; // Using fewer shards for this test
 			const config = {
 				dirPath: testDirPath,
@@ -267,22 +267,22 @@ describe("DocumentRepository", () => {
 			// Rebalance to desired number of shards
 			await docRepo["shardMgr"].rebalance(numOfShards);
 
-			await docRepo.saveMany(testDocuments);
+			await docRepo.insertMany(testDocuments);
 
-			const newDocuments = [
+			const additionalDocuments = [
 				{
-					id: "docX",
-					content: "Updated Document X axis",
-					embedding: [1, 0, 0],
+					id: "docNew1",
+					content: "New Document 1",
+					embedding: [0.5, 0.5, 0.5],
 				},
 				{
-					id: "docY",
-					content: "Updated Document Y axis",
-					embedding: [0, 1, 0],
+					id: "docNew2",
+					content: "New Document 2",
+					embedding: [0.3, 0.3, 0.3],
 				},
 			];
 
-			await docRepo.saveMany(newDocuments);
+			await docRepo.insertMany(additionalDocuments);
 
 			let resultDocuments: any[] = [];
 
@@ -292,26 +292,19 @@ describe("DocumentRepository", () => {
 				resultDocuments = resultDocuments.concat(res.hits);
 			}
 
-			expect(resultDocuments.length).toBe(testDocuments.length);
+			// Should now have original documents plus the new ones
+			expect(resultDocuments.length).toBe(
+				testDocuments.length + additionalDocuments.length
+			);
 
-			// Verify the updated documents exist in the results (order doesn't matter)
+			// Verify the new documents exist in the results
 			const documents = resultDocuments.map((r) => r.document);
-			const updatedXDoc = documents.find((doc: any) => doc.id === "docX");
-			const updatedYDoc = documents.find((doc: any) => doc.id === "docY");
-			expect(updatedXDoc.content).toBe("Updated Document X axis");
-			expect(updatedYDoc.content).toBe("Updated Document Y axis");
-			// Check that the other documents remain unchanged
-			const remainingDocs = documents.filter(
-				(doc: any) => doc.id !== "docX" && doc.id !== "docY"
-			);
-			const randomIndex = Math.floor(
-				Math.random() * remainingDocs.length
-			);
-			const randomDoc = remainingDocs[randomIndex];
-			const originalDoc = testDocuments.find(
-				(doc: any) => doc.id === randomDoc.id
-			);
-			expect(randomDoc.content).toBe(originalDoc?.content);
+			const newDoc1 = documents.find((doc: any) => doc.id === "docNew1");
+			const newDoc2 = documents.find((doc: any) => doc.id === "docNew2");
+			expect(newDoc1).toBeDefined();
+			expect(newDoc2).toBeDefined();
+			expect(newDoc1.content).toBe("New Document 1");
+			expect(newDoc2.content).toBe("New Document 2");
 		});
 	});
 
@@ -328,7 +321,7 @@ describe("DocumentRepository", () => {
 			// Rebalance to desired number of shards
 			await docRepo["shardMgr"].rebalance(numOfShards);
 
-			await docRepo.saveMany(documents);
+			await docRepo.insertMany(documents);
 
 			// Query vector along Z axis direction
 			const queryVector = [0, 0, 1];
@@ -354,7 +347,7 @@ describe("DocumentRepository", () => {
 			// Rebalance to desired number of shards
 			await docRepo["shardMgr"].rebalance(numOfShards);
 
-			await docRepo.saveMany(documents);
+			await docRepo.insertMany(documents);
 
 			const queryVector = [0.6, 0.7, 0.8];
 			const k = 5;

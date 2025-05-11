@@ -2,7 +2,7 @@ import {
 	MarkDownDoc,
 	MdDocRawSchema,
 	OramaStore,
-} from "../search/vectorStore.js";
+} from "../infrastructure/vectorStore.js";
 import { Embeddings } from "@langchain/core/embeddings";
 import * as fs from "fs";
 import * as path from "path";

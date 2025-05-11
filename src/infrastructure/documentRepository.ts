@@ -8,7 +8,7 @@ import {
 	Result,
 	Schema,
 	MODE_VECTOR_SEARCH,
-	updateMultiple,
+	insertMultiple,
 } from "@orama/orama";
 import { MaxMarginalRelevanceSearchOptions } from "@langchain/core/vectorstores";
 import { ShardManager } from "./shardManager.js";
@@ -48,11 +48,7 @@ export class DocumentRepository<T extends MdDocRawSchema> {
 		return new DocumentRepository<T>(shardMgr);
 	}
 
-	/**
-	 *  Save all documents, if existing documents are passed, they will be updated
-	 *  if new documents are passed, they will be inserted
-	 */
-	async saveMany<Doc extends PartialSchemaDeep<TypedDocument<Orama<T>>>>(
+	async insertMany<Doc extends PartialSchemaDeep<TypedDocument<Orama<T>>>>(
 		documents: Doc[]
 	): Promise<void> {
 		if (!documents || documents.length === 0) {
@@ -82,16 +78,7 @@ export class DocumentRepository<T extends MdDocRawSchema> {
 				const shardIdx = parseInt(shardKey, 10);
 				const shard = await this.shardMgr.getShard(shardIdx);
 
-				const { internalIdToId } =
-					shard.data.docs.sharedInternalDocumentStore;
-				const docIds = docs
-					.map(({ id }) => String(id))
-					.filter((id) => id !== undefined);
-
-				const existingDocIds = docIds.filter((id) =>
-					internalIdToId.includes(id)
-				);
-				updateMultiple(shard, existingDocIds, docs);
+				insertMultiple(shard, docs);
 				await this.shardMgr.persistShard(shard, shardIdx);
 			}
 		);
