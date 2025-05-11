@@ -5,15 +5,23 @@ import * as path from "path";
 import * as fs from "fs";
 import { AnySchema, create, search } from "@orama/orama";
 import { persist, restore } from "@orama/plugin-data-persistence";
+import { MdDocRawSchema } from "./vectorStore.js";
 
 describe("DocumentRepository", () => {
 	const fileAdapter = new localFile();
 	const testDirPath = path.join(__dirname, "test_db");
-	const testSchema = {
+	const testSchema: MdDocRawSchema = {
 		id: "string",
+		title: "string",
+		path: "string",
 		content: "string",
 		embedding: "vector[3]",
-	} satisfies AnySchema;
+		embeddingModel: "string",
+		ctime: "number",
+		mtime: "number",
+		tags: "string[]",
+		extension: "string",
+	};
 
 	const testDocuments = [
 		{ id: "docX", content: "Document X axis", embedding: [1, 0, 0] },

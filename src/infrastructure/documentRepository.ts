@@ -13,6 +13,7 @@ import {
 } from "@orama/orama";
 import { MaxMarginalRelevanceSearchOptions } from "@langchain/core/vectorstores";
 import { ShardManager } from "./shardManager.js";
+import { MdDocRawSchema } from "./vectorStore.js";
 
 /**
  * OramaDbConfig defines the configuration for a partitioned Orama database
@@ -27,14 +28,14 @@ interface DbConfig<T extends AnySchema> {
 /**
  * DocumentRepository manages partitioned Orama databases
  */
-export class DocumentRepository<T extends AnySchema> {
+export class DocumentRepository<T extends MdDocRawSchema> {
 	private shardMgr: ShardManager<T>;
 
 	private constructor(shardMgr: ShardManager<T>) {
 		this.shardMgr = shardMgr;
 	}
 
-	static async init<T extends AnySchema>(
+	static async init<T extends MdDocRawSchema>(
 		fileAdapter: FileAdapter,
 		config: DbConfig<T>,
 		language = "english"
