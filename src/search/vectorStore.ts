@@ -31,7 +31,7 @@ interface OramaStoreConfig {
 }
 
 export class OramaStore extends VectorStore {
-	private db: DocumentRepository;
+	private db: DocumentRepository<MdDocRawSchema>;
 	private modelName?: string;
 
 	private constructor(
@@ -99,16 +99,11 @@ export class OramaStore extends VectorStore {
 		k: number,
 		filter?: Partial<WhereCondition<MdDocRawSchema>>
 	): Promise<[MdDocInterface, number][]> {
-		const results = await this.db.search(query, {
-			k,
-			filter,
-		} as MaxMarginalRelevanceSearchOptions<WhereCondition<MdDocRawSchema>>);
-		return results.map(
-			({ document, score }: { document: any; score: number }) => [
-				this.toDocument(document),
-				score,
-			]
-		);
+		const results = await this.db.search(query, { k, filter });
+		return results.map(({ document, score }) => [
+			this.toDocument(document),
+			score,
+		]);
 	}
 
 	async maxMarginalRelevanceSearch(
@@ -125,10 +120,8 @@ export class OramaStore extends VectorStore {
 			fetchK,
 			lambda,
 			filter,
-		} as MaxMarginalRelevanceSearchOptions<WhereCondition<MdDocRawSchema>>);
-		return results.map(({ document }: { document: any }) =>
-			this.toDocument(document)
-		);
+		});
+		return results.map(({ document }) => this.toDocument(document));
 	}
 
 	private toDocument(
