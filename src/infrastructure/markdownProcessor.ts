@@ -1,8 +1,7 @@
-import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { MD5 } from "crypto-js";
 import { FileAdapter } from "../utils/fileAdapter.js";
-
-const CHUNK_SIZE = 500;
+import { ObsidianMetadataExtractor } from "./obsidianMetadataExtractor.js";
+import { MarkdownTextSplitter } from "@langchain/textsplitters";
 
 export type MdDocMetadata = {
 	title?: string;
@@ -11,6 +10,8 @@ export type MdDocMetadata = {
 	tags?: string[];
 	ctime?: number;
 	mtime?: number;
+	description?: string;
+	[key: string]: any;
 };
 
 export class MarkdownProcessor {
@@ -22,59 +23,62 @@ export class MarkdownProcessor {
 		return (await this.file.read(filePath, "utf-8")) as string;
 	}
 
+	async getFileInfo(
+		filePath: string,
+		content: string
+	): Promise<MdDocMetadata> {
+		const basename = await this.file.basename(filePath);
+		const extension = await this.file.extname(filePath);
+		const stats = await this.file.stat(filePath);
+
+		const obsidianMeta = ObsidianMetadataExtractor.extractMetadata(content);
+
+		return {
+			title: basename,
+			path: filePath,
+			extension: extension,
+			ctime: stats.ctime,
+			mtime: stats.mtime,
+
+			...(obsidianMeta.frontMatter.title && {
+				title: obsidianMeta.frontMatter.title,
+			}),
+			...(obsidianMeta.frontMatter.description && {
+				description: obsidianMeta.frontMatter.description,
+			}),
+			...obsidianMeta.frontMatter,
+			...obsidianMeta.dataviewFields,
+
+			tags: obsidianMeta.tags,
+		};
+	}
+
 	async splitIntoChunks(content: string, documentMetadata: MdDocMetadata) {
-		const textSplitter = RecursiveCharacterTextSplitter.fromLanguage(
-			"markdown",
+		const contentWithoutFrontMatter =
+			ObsidianMetadataExtractor.removeFrontMatter(content);
+		const textSplitter = new MarkdownTextSplitter({
+			chunkSize: 500,
+			chunkOverlap: 0,
+		});
+		const chunkHeader = `\n\nNOTE TITLE: [[${
+			documentMetadata.title
+		}]]\n\nMETADATA:${JSON.stringify(
+			documentMetadata
+		)}\n\nNOTE BLOCK CONTENT:\n\n`;
+		const chunks = await textSplitter.createDocuments(
+			[contentWithoutFrontMatter],
+			[],
 			{
-				chunkSize: CHUNK_SIZE,
+				chunkHeader,
+				appendChunkOverlapHeader: true,
 			}
 		);
-
-		// Add chunk header
-		const chunks = await textSplitter.createDocuments([content], [], {
-			chunkHeader: `\n\nNOTE TITLE: [[${
-				documentMetadata.title
-			}]]\n\nMETADATA:${JSON.stringify(
-				documentMetadata
-			)}\n\nNOTE BLOCK CONTENT:\n\n`,
-			appendChunkOverlapHeader: true,
-		});
-
-		// Format results
 		return chunks
 			.map((chunk) => ({
 				content: chunk.pageContent,
 				documentMetadata,
 			}))
 			.filter((chunk) => chunk.content.trim());
-	}
-
-	private extractTags(content: string) {
-		const tagRegex = /#([a-zA-Z0-9_-]+)/g;
-		const tags: string[] = [];
-		let match: RegExpExecArray | null;
-
-		while ((match = tagRegex.exec(content)) !== null) {
-			tags.push(match[0]);
-		}
-
-		return [...new Set(tags)]; // Remove duplicates
-	}
-
-	async getFileInfo(filePath: string, content: string) {
-		const basename = await this.file.basename(filePath);
-		const extension = await this.file.extname(filePath);
-		const stats = await this.file.stat(filePath);
-		const tags = this.extractTags(content);
-
-		return {
-			title: basename,
-			path: filePath,
-			ctime: stats.ctime,
-			mtime: stats.mtime,
-			tags: tags,
-			extension: extension,
-		};
 	}
 
 	getDocHash(content: string) {
@@ -89,7 +93,6 @@ export class MarkdownProcessor {
 			const fileInfo = await this.getFileInfo(filePath, content);
 			const chunks = await this.splitIntoChunks(content, fileInfo);
 
-			// Add ID to each chunk to partition the data
 			return chunks.map((chunk) => ({
 				id: this.getDocHash(chunk.content),
 				content: chunk.content,

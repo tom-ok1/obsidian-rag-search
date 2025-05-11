@@ -23,7 +23,7 @@ describe("MarkdownProcessor", () => {
 
 		expect(chunks.length).toBeGreaterThan(1);
 		expect(chunks[0].content).toContain("NOTE TITLE: [[sample.md]]");
-		expect(chunks[0].documentMetadata.tags).toContain("#tag1");
+		expect(chunks[0].documentMetadata.tags).toContain("tag1");
 		expect(chunks[0].documentMetadata.extension).toBe("md");
 	});
 
@@ -37,5 +37,17 @@ describe("MarkdownProcessor", () => {
 		expect(ids1).toEqual(ids2); // same content => same hashes
 		// sanity check that hash really matches MD5(content)
 		expect(ids1[0]).toBe(MD5(chunks1[0].content).toString());
+	});
+
+	it("splitIntoChunks removes frontmatter and splits only the body", async () => {
+		const content = `---\ntitle: test\ntags: tag1\n---\n# Heading\nBody text. #tag2`;
+		const meta = await processor.getFileInfo(sampleFilePath, content);
+		const chunks = await processor.splitIntoChunks(content, meta);
+		// frontmatter should not be present in any chunk
+		for (const chunk of chunks) {
+			expect(chunk.content).not.toMatch(/title:|tags:/);
+		}
+		// tag2 should be in metadata
+		expect(meta.tags).toContain("tag2");
 	});
 });
