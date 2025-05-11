@@ -1,9 +1,5 @@
 import { FileAdapter } from "../utils/fileAdapter.js";
 import {
-	Orama,
-	AnySchema,
-	PartialSchemaDeep,
-	TypedDocument,
 	search,
 	WhereCondition,
 	Result,
@@ -13,30 +9,26 @@ import {
 } from "@orama/orama";
 import { MaxMarginalRelevanceSearchOptions } from "@langchain/core/vectorstores";
 import { ShardManager } from "./shardManager.js";
+import { MdDocRawSchema } from "../search/vectorStore.js";
 
-/**
- * OramaDbConfig defines the configuration for a partitioned Orama database
- * @param dirPath - Directory path to store the database files
- * @param schema - Schema definition for the database
- */
-interface DbConfig<T extends AnySchema> {
+interface DbConfig {
 	dirPath: string;
-	schema: T;
+	schema: MdDocRawSchema;
 }
 
 /**
- * DocumentRepository manages partitioned Orama databases
+ * DocumentRepository manages partitioned Orama databases for vector schema
  */
-export class DocumentRepository<T extends AnySchema> {
-	private shardMgr: ShardManager<T>;
+export class DocumentRepository {
+	private shardMgr: ShardManager<MdDocRawSchema>;
 
-	private constructor(shardMgr: ShardManager<T>) {
+	private constructor(shardMgr: ShardManager<MdDocRawSchema>) {
 		this.shardMgr = shardMgr;
 	}
 
-	static async init<T extends AnySchema>(
+	static async init(
 		fileAdapter: FileAdapter,
-		config: DbConfig<T>,
+		config: DbConfig,
 		language = "english"
 	) {
 		const shardMgr = await ShardManager.init(
@@ -45,29 +37,30 @@ export class DocumentRepository<T extends AnySchema> {
 			config.schema,
 			language
 		);
-		return new DocumentRepository<T>(shardMgr);
+		return new DocumentRepository(shardMgr);
 	}
 
 	/**
 	 *  Save all documents, if existing documents are passed, they will be updated
 	 *  if new documents are passed, they will be inserted
 	 */
-	async saveMany<Doc extends PartialSchemaDeep<TypedDocument<Orama<T>>>>(
-		documents: Doc[]
+	async saveMany(
+		documents: Partial<Schema<MdDocRawSchema>>[]
 	): Promise<void> {
 		if (!documents || documents.length === 0) {
 			return;
 		}
 
-		const docsByPartition: Record<string, Doc[]> = {};
-		// Initialize arrays for all possible shard keys
+		const docsByPartition: Record<
+			string,
+			Partial<Schema<MdDocRawSchema>>[]
+		> = {};
 		for (let i = 0; i < this.shardMgr.numOfShards; i++) {
 			docsByPartition[i.toString()] = [];
 		}
 
 		for (const doc of documents) {
 			if (doc.id === undefined) continue;
-
 			const shardKey = this.shardMgr.getNode(String(doc.id));
 			if (!docsByPartition[shardKey]) {
 				docsByPartition[shardKey] = [];
@@ -78,16 +71,13 @@ export class DocumentRepository<T extends AnySchema> {
 		const insertPromises = Object.entries(docsByPartition).map(
 			async ([shardKey, docs]) => {
 				if (docs.length === 0) return;
-
 				const shardIdx = parseInt(shardKey, 10);
 				const shard = await this.shardMgr.getShard(shardIdx);
-
 				const { internalIdToId } =
 					shard.data.docs.sharedInternalDocumentStore;
 				const docIds = docs
 					.map(({ id }) => String(id))
 					.filter((id) => id !== undefined);
-
 				const existingDocIds = docIds.filter((id) =>
 					internalIdToId.includes(id)
 				);
@@ -101,14 +91,15 @@ export class DocumentRepository<T extends AnySchema> {
 
 	async search(
 		query: number[],
-		options: MaxMarginalRelevanceSearchOptions<WhereCondition<T>>
-	): Promise<Result<Schema<T>>[]> {
+		options: MaxMarginalRelevanceSearchOptions<
+			WhereCondition<MdDocRawSchema>
+		>
+	): Promise<Result<Schema<MdDocRawSchema>>[]> {
 		const { filter, k, fetchK, lambda } = options;
-		let results: Result<Schema<T>>[] = [];
+		let results: Result<Schema<MdDocRawSchema>>[] = [];
 
 		for (let i = 0; i < this.shardMgr.numOfShards; i++) {
 			const shard = await this.shardMgr.getShard(i);
-
 			const res = await search(shard, {
 				mode: MODE_VECTOR_SEARCH,
 				vector: { value: query, property: "embedding" },
