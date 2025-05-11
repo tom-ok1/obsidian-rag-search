@@ -1,7 +1,6 @@
 import { FileAdapter } from "../utils/fileAdapter.js";
 import {
 	Orama,
-	AnySchema,
 	PartialSchemaDeep,
 	TypedDocument,
 	search,
@@ -20,7 +19,7 @@ import { MdDocRawSchema } from "./vectorStore.js";
  * @param dirPath - Directory path to store the database files
  * @param schema - Schema definition for the database
  */
-interface DbConfig<T extends AnySchema> {
+interface DbConfig<T extends MdDocRawSchema> {
 	dirPath: string;
 	schema: T;
 }

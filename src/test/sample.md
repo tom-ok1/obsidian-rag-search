@@ -1,5 +1,7 @@
 # Title
 
+#tag1
+
 Some markdown text with #tag1.
 
 ## h2 Heading
