@@ -113,4 +113,8 @@ export class DocumentRepository<T extends MdDocRawSchema> {
 	async rebalance(): Promise<void> {
 		await this.shardMgr.autoRebalance();
 	}
+
+	async reset() {
+		await this.shardMgr.reset();
+	}
 }

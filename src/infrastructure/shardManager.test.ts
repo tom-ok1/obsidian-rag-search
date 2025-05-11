@@ -95,7 +95,7 @@ describe("ShardManager", () => {
 			}
 		});
 
-		describe("resetShards method", () => {
+		describe("reset method", () => {
 			it("should delete all shards and reset to initial state", async () => {
 				// First create with multiple shards
 				const newDirPath = path.join(testDirPath, "reset_shards_test");
@@ -118,7 +118,7 @@ describe("ShardManager", () => {
 				}
 
 				// Reset shards
-				await shardMgr.resetShards();
+				await shardMgr.reset();
 
 				// Should be back to 1 shard (default)
 				expect(shardMgr.numOfShards).toBe(1);

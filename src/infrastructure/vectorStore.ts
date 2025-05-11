@@ -66,6 +66,10 @@ export class OramaStore extends VectorStore {
 		return store;
 	}
 
+	async reset() {
+		await this.db.reset();
+	}
+
 	async addVectors(
 		vectors: number[][],
 		documents: MdDocInterface[]

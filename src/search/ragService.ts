@@ -74,4 +74,8 @@ export class RagService {
 		}));
 		await this.vectorStore.addDocuments(documents);
 	}
+
+	async reset() {
+		await this.vectorStore.reset();
+	}
 }
