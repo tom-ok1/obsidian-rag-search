@@ -381,6 +381,27 @@ export class ShardManager<T extends AnySchema> {
 		return this.fileAdapter.join(this.dirPath, storeFilename(idx + 1));
 	}
 
+	async resetShards(): Promise<void> {
+		// Delete all existing shard files
+		for (let i = 0; i < this.numOfShards; i++) {
+			const filePath = this.shardPath(i);
+			if (await this.fileAdapter.exists(filePath)) {
+				await this.fileAdapter.delete(filePath);
+			}
+		}
+
+		// Reset
+		this.numOfShardsValue = 1;
+		this.ring = new HashRing();
+		this.ring.addNode(this.nodeName(0));
+		this.cache.clear();
+
+		// Create a new empty shard
+		const db = this.createBasedOnLangage();
+		await this.setShard(db, 0);
+		await this.persistShard(db, 0);
+	}
+
 	get numOfShards(): number {
 		return this.numOfShardsValue;
 	}

@@ -36,4 +36,11 @@ export class LRU<K, V> {
 	get length() {
 		return this.map.size;
 	}
+
+	/**
+	 * Clears all items from the cache
+	 */
+	clear() {
+		this.map.clear();
+	}
 }

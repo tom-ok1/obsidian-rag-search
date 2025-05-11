@@ -2,7 +2,7 @@ import { localFile } from "../utils/LocalFile.js";
 import { ShardManager, storeFilename } from "./shardManager.js";
 import * as path from "path";
 import * as fs from "fs";
-import { AnySchema, create } from "@orama/orama";
+import { AnySchema, create, insert, getByID } from "@orama/orama";
 import { persist } from "@orama/plugin-data-persistence";
 
 describe("ShardManager", () => {
@@ -94,8 +94,49 @@ describe("ShardManager", () => {
 				expect(shard.tokenizer.language).toBe("japanese");
 			}
 		});
-	});
 
+		describe("resetShards method", () => {
+			it("should delete all shards and reset to initial state", async () => {
+				// First create with multiple shards
+				const newDirPath = path.join(testDirPath, "reset_shards_test");
+				const shardMgr = await ShardManager.init(
+					fileAdapter,
+					newDirPath,
+					testSchema,
+					"english"
+				);
+
+				// Rebalance to 3 shards
+				await shardMgr.rebalance(3);
+				expect(shardMgr.numOfShards).toBe(3);
+
+				// Insert test documents into shards
+				for (const doc of testDocuments) {
+					const shardIdx = parseInt(shardMgr.getNode(doc.id), 10);
+					const shard = await shardMgr.getShard(shardIdx);
+					await insert(shard, doc);
+				}
+
+				// Reset shards
+				await shardMgr.resetShards();
+
+				// Should be back to 1 shard (default)
+				expect(shardMgr.numOfShards).toBe(1);
+
+				// Check that only one shard file exists
+				const files = fs.readdirSync(newDirPath);
+				expect(files.length).toBe(1);
+				expect(files[0]).toBe(storeFilename(1));
+
+				// New shard should be empty (no documents)
+				const shard = await shardMgr.getShard(0);
+				for (const doc of testDocuments) {
+					const retrievedDoc = getByID(shard, doc.id);
+					expect(retrievedDoc).toBeUndefined();
+				}
+			});
+		});
+	});
 	describe("Loading a ShardManager", () => {
 		it("should load all database shards", async () => {
 			const existingShards = 5;
