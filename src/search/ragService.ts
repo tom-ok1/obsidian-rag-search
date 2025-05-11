@@ -4,6 +4,7 @@ import { ChatMessage, createChatGraph } from "../infrastructure/chatGraph.js";
 import { MarkdownProcessor } from "../infrastructure/markdownProcessor.js";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { EmbeddingsInterface } from "@langchain/core/embeddings";
+import { ChatHistory } from "../infrastructure/chatHistory.js";
 
 type ChatGraph = ReturnType<typeof createChatGraph>;
 /**
@@ -17,13 +18,15 @@ type RagConfig = {
 };
 
 export class RagService {
-	private history: ChatMessage[] = [];
+	private chatHistory: ChatHistory;
 
 	private constructor(
 		private readonly chatGraph: ChatGraph,
 		private readonly vectorStore: OramaStore,
 		private readonly markdownProcessor: MarkdownProcessor
-	) {}
+	) {
+		this.chatHistory = new ChatHistory();
+	}
 
 	static async create(params: {
 		model: BaseChatModel;
@@ -46,22 +49,23 @@ export class RagService {
 	async search(question: string) {
 		const res = await this.chatGraph.invoke({
 			question,
-			history: this.history,
+			history: this.chatHistory,
 		});
-		this.history.concat(res.history);
-		this.history.push({
+
+		this.chatHistory.addMessage({
 			role: "user",
 			content: question,
 		});
+
 		return { answer: res.answer, docs: res.context };
 	}
 
 	/**
 	 *  Add chat history from finished readable stream
-	 * @param history assistant's chat history
+	 * @param message assistant's chat history
 	 */
-	async addChatHistory(history: ChatMessage) {
-		this.history.push(history);
+	async addChatHistory(message: ChatMessage) {
+		this.chatHistory.addMessage(message);
 	}
 
 	async insert(filePaths: string[]) {

@@ -8,6 +8,7 @@ import { MdDocMetadata } from "./markdownProcessor.js";
 import { IterableReadableStream } from "@langchain/core/utils/stream";
 import { AIMessageChunk } from "@langchain/core/messages";
 import { BaseLanguageModelInput } from "@langchain/core/language_models/base";
+import { ChatHistory } from "./chatHistory.js";
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -70,7 +71,7 @@ export function createChatGraph(
 			stream: IterableReadableStream<AIMessageChunk>;
 			historyStream: IterableReadableStream<AIMessageChunk>;
 		}>,
-		history: Annotation<ChatMessage[]>,
+		history: Annotation<ChatHistory>,
 		isEnough: Annotation<boolean>,
 	});
 
@@ -97,7 +98,7 @@ export function createChatGraph(
 
 		const messages = await analyzePrompt.invoke({
 			question: state.question,
-			history: mapHistoryToText(state.history),
+			history: state.history.formatHistoryText(),
 		});
 		return {
 			search: await callWithStructuredOutput(
@@ -201,7 +202,7 @@ export function createChatGraph(
 		const messages = await ragPrompt.invoke({
 			question: state.question,
 			context: docsContent,
-			history: mapHistoryToText(state.history),
+			history: state.history.formatHistoryText(),
 		});
 		const stream = await model.stream(messages);
 		return {
@@ -261,8 +262,4 @@ async function callWithStructuredOutput<T extends Record<string, any>>(
 		}
 	}
 	throw new Error("Unreachable");
-}
-
-function mapHistoryToText(history: ChatMessage[]): string {
-	return history.map((msg) => `${msg.role}: ${msg.content}`).join("\n");
 }

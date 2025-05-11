@@ -1,4 +1,5 @@
 import { createChatGraph, type ChatMessage, MAX_RETRIES } from "./chatGraph.js";
+import { ChatHistory } from "./chatHistory.js";
 import { Document } from "@langchain/core/documents";
 import type { VectorStore } from "@langchain/core/vectorstores";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
@@ -69,9 +70,11 @@ const extraDocs = makeDocs(2, "extra");
 describe("createChatGraph", () => {
 	let store: VectorStore;
 	let cm: ReturnType<typeof mockChatModel>;
+	let chatHistory: ChatHistory;
 	beforeEach(() => {
 		store = mockVectorStore(initialDocs);
 		cm = mockChatModel();
+		chatHistory = new ChatHistory();
 		// default behaviour every test can override
 		cm.analyse.mockResolvedValue({
 			query: "q",
@@ -85,7 +88,7 @@ describe("createChatGraph", () => {
 		const graph = createChatGraph(store, cm.instance);
 		const res = await graph.invoke({
 			question: "What is foo?",
-			history: [],
+			history: chatHistory,
 		});
 
 		expect(res.context).toEqual(initialDocs.slice(0, 2));
@@ -99,7 +102,7 @@ describe("createChatGraph", () => {
 		const graph = createChatGraph(store, cm.instance);
 		await graph.invoke({
 			question: "bar?",
-			history: [],
+			history: chatHistory,
 		});
 
 		// similaritySearch is called only once
@@ -118,7 +121,7 @@ describe("createChatGraph", () => {
 		const graph = createChatGraph(store, cm.instance);
 		await graph.invoke({
 			question: "foo?",
-			history: [],
+			history: chatHistory,
 		});
 		expect(cm.evaluate).toHaveBeenCalledTimes(MAX_RETRIES);
 		expect(cm.instance.stream).toHaveBeenCalledTimes(1);
@@ -151,7 +154,7 @@ describe("createChatGraph", () => {
 		const graph = createChatGraph(store, cm.instance);
 		const res = await graph.invoke({
 			question: "baz?",
-			history: [],
+			history: chatHistory,
 		});
 
 		expect((store.similaritySearch as Mock).mock.calls).toHaveLength(2);
@@ -173,7 +176,7 @@ describe("createChatGraph", () => {
 		const graph = createChatGraph(store, cm.instance);
 		const res = await graph.invoke({
 			question: "broken json?",
-			history: [],
+			history: chatHistory,
 		});
 
 		expect(cm.analyse).toHaveBeenCalledTimes(2);
@@ -182,18 +185,17 @@ describe("createChatGraph", () => {
 	});
 
 	it("add chat history to the context", async () => {
-		const initialHistory: ChatMessage[] = [
-			{ role: "user", content: "Who is Einstein?" },
-			{
-				role: "assistant",
-				content: "Albert Einstein was a theoretical physicist.",
-			},
-		];
+		const testHistory = new ChatHistory();
+		testHistory.addMessage({ role: "user", content: "Who is Einstein?" });
+		testHistory.addMessage({
+			role: "assistant",
+			content: "Albert Einstein was a theoretical physicist.",
+		});
 
 		const graph = createChatGraph(store, cm.instance);
 		const res = await graph.invoke({
 			question: "What did he discover?",
-			history: initialHistory,
+			history: testHistory,
 		});
 
 		// Check that history was formatted properly and passed to the model
@@ -202,7 +204,7 @@ describe("createChatGraph", () => {
 		const promptCallArg = (cm.stream as Mock).mock.calls[0][0];
 		expect(promptCallArg.toString()).toContain(expectedFormattedHistory);
 
-		// Verify history was updated correctly
-		expect(res.history).toEqual([...initialHistory]);
+		// Verify history was returned in the response
+		expect(res.history).toBe(testHistory);
 	});
 });
