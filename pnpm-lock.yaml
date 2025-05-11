@@ -35,6 +35,9 @@ importers:
       '@langchain/openai':
         specifier: ^0.5.10
         version: 0.5.10(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(ws@8.18.1)
+      '@langchain/textsplitters':
+        specifier: ^0.1.0
+        version: 0.1.0(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))
       '@mui/icons-material':
         specifier: ^7.0.2
         version: 7.0.2(@mui/material@7.0.2(@emotion/react@11.14.0(@types/react@19.1.2)(react@19.1.0))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@19.1.2)(react@19.1.0))(@types/react@19.1.2)(react@19.1.0))(@types/react@19.1.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@types/react@19.1.2)(react@19.1.0)
@@ -71,6 +74,9 @@ importers:
       google-auth-library:
         specifier: ^9.15.1
         version: 9.15.1
+      js-yaml:
+        specifier: ^4.1.0
+        version: 4.1.0
       langchain:
         specifier: ^0.3.24
         version: 0.3.24(@langchain/anthropic@0.3.20(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3))))(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(@langchain/google-genai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai-web@0.2.6(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(@langchain/google-vertexai@0.2.5(@langchain/core@0.3.49(openai@4.96.0(ws@8.18.1)(zod@3.24.3)))(zod@3.24.3))(axios@1.9.0)(openai@4.96.0(ws@8.18.1)(zod@3.24.3))(ws@8.18.1)
@@ -99,6 +105,9 @@ importers:
       '@types/crypto-js':
         specifier: ^4.2.2
         version: 4.2.2
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
       '@types/node':
         specifier: ^22.15.2
         version: 22.15.2
@@ -1376,6 +1385,9 @@ packages:
 
   '@types/http-cache-semantics@4.0.4':
     resolution: {integrity: sha512-1m0bIFVc7eJWyve9S0RnuRgcQqF/Xd5QsUZAZeQFr1Q3/p9JWoQQEqmVy+DPTNpGXwhgIetAoYF8JSc33q29QA==}
+
+  '@types/js-yaml@4.0.9':
+    resolution: {integrity: sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg==}
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
@@ -4156,6 +4168,8 @@ snapshots:
   '@types/estree@1.0.7': {}
 
   '@types/http-cache-semantics@4.0.4': {}
+
+  '@types/js-yaml@4.0.9': {}
 
   '@types/json-schema@7.0.15': {}
 
