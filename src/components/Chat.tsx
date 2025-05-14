@@ -1,11 +1,11 @@
 import React from "react";
-import { Stack, Divider, Snackbar } from "@mui/material";
-import type { RagService } from "../search/ragService.js";
+import { Stack, Divider } from "@mui/material";
 import { useChatStream } from "src/hooks/useChatStream.js";
 import { MessageList } from "./MessageList.js";
 import { ChatInput } from "./ChatInput.js";
+import { ISearchService } from "src/api/controller/modules.js";
 
-export const ChatApp: React.FC<{ chat: RagService }> = ({ chat }) => {
+export const ChatApp: React.FC<{ chat: ISearchService }> = ({ chat }) => {
 	const { messages, isLoading, ask, error } = useChatStream(chat);
 
 	return (

@@ -12,7 +12,7 @@ import {
 } from "@orama/orama";
 import { MaxMarginalRelevanceSearchOptions } from "@langchain/core/vectorstores";
 import { ShardManager } from "./shardManager.js";
-import { MdDocRawSchema } from "./vectorStore.js";
+import { MdDocRawSchema } from "src/infrastructure/vectorStore.js";
 
 /**
  * OramaDbConfig defines the configuration for a partitioned Orama database

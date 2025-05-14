@@ -9,8 +9,6 @@ import {
 	TFile,
 	WorkspaceLeaf,
 } from "obsidian";
-import { RagService } from "src/search/ragService.js";
-import { VaultFile } from "src/utils/VaultFile.js";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { ChatApp } from "src/components/Chat.js";
@@ -20,6 +18,7 @@ import {
 	getChatModel,
 	getEmbeddingModel,
 } from "src/api/models.js";
+import { ServiceManager } from "src/api/controller/modules.js";
 
 interface EmbeddingModel {
 	name: string;
@@ -77,20 +76,23 @@ const DEFAULT_SETTINGS: PluginSettings = {
 };
 
 export default class MyPlugin extends Plugin {
-	private chat!: RagService;
+	private serviceManager!: ServiceManager;
+	private chatView: ChatView | null;
 	private readonly STORAGE_KEY = "rag-search-fileMtimeMap";
 	settings: PluginSettings;
 
 	async onload() {
 		await this.loadSettings();
 
-		this.registerView(
-			VIEW_TYPE_CHAT,
-			(leaf) => new ChatView(leaf, this.chat)
-		);
-		this.addSettingTab(new RAGSearchSettingsTab(this.app, this));
-
+		this.serviceManager = ServiceManager.getInstance();
+		this.serviceManager.initContext(this.app, "test");
 		await this.initializeChatModel();
+
+		this.registerView(VIEW_TYPE_CHAT, (leaf) => {
+			this.chatView = new ChatView(leaf, this.serviceManager);
+			return this.chatView;
+		});
+		this.addSettingTab(new RAGSearchSettingsTab(this.app, this));
 
 		this.addCommand({
 			id: "open-rag-chat-react",
@@ -131,17 +133,12 @@ export default class MyPlugin extends Plugin {
 				this.settings.googleProjectId,
 				this.settings.openaiApiKey
 			);
+			await this.serviceManager.initializeServices(embeddings, model);
 
-			const file = new VaultFile(this.app);
-			this.chat = await RagService.create({
-				model,
-				embeddings,
-				file,
-				config: {
-					dirPath: "test",
-					language: "japanese",
-				},
-			});
+			// update react component state
+			if (this.chatView) {
+				this.chatView.resetSearchService();
+			}
 		} catch (error) {
 			console.error("Error initializing chat model:", error);
 			new Notice(`Failed to initialize chat model. ${error.message}`);
@@ -162,7 +159,8 @@ export default class MyPlugin extends Plugin {
 			})
 			.map(({ path }) => path);
 
-		await this.chat.insert(updatedFiles);
+		const documentService = this.serviceManager.getService("document");
+		await documentService.insert(updatedFiles);
 
 		const updatedFilesMtime = files.reduce(
 			(acc, f) => ({
@@ -210,12 +208,17 @@ const VIEW_TYPE_CHAT = "rag-chat-react";
 export class ChatView extends ItemView {
 	private root?: ReactDOM.Root;
 
-	constructor(leaf: WorkspaceLeaf, private chat: RagService) {
+	constructor(
+		leaf: WorkspaceLeaf,
+		private readonly serviceManager: ServiceManager
+	) {
 		super(leaf);
 	}
+
 	getViewType() {
 		return VIEW_TYPE_CHAT;
 	}
+
 	getDisplayText() {
 		return "RAG Chat (React)";
 	}
@@ -225,7 +228,14 @@ export class ChatView extends ItemView {
 		container.empty();
 
 		this.root = ReactDOM.createRoot(container);
-		this.root.render(React.createElement(ChatApp, { chat: this.chat }));
+		this.resetSearchService();
+	}
+
+	async resetSearchService() {
+		const searchService = this.serviceManager.getService("search");
+		this.root?.render(
+			React.createElement(ChatApp, { chat: searchService })
+		);
 	}
 
 	async onClose() {
@@ -330,8 +340,14 @@ class RAGSearchSettingsTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.chatModelProvider)
 					.onChange(async (value: ChatModelProviders) => {
 						this.plugin.settings.chatModelProvider = value;
-						await this.plugin.saveSettings();
 					});
+			})
+			.addExtraButton((btn) => {
+				btn.setIcon("refresh-cw");
+				btn.setTooltip("Apply changes");
+				btn.onClick(async () => {
+					await this.plugin.saveSettings();
+				});
 			});
 
 		new Setting(containerEl)

@@ -1,15 +1,11 @@
-import {
-	MarkDownDoc,
-	MdDocRawSchema,
-	OramaStore,
-} from "../infrastructure/vectorStore.js";
+import { MarkDownDoc, MdDocRawSchema, OramaStore } from "./vectorStore.js";
 import { Embeddings } from "@langchain/core/embeddings";
 import * as fs from "fs";
 import * as path from "path";
 import { create, count } from "@orama/orama";
 import { persist, restore } from "@orama/plugin-data-persistence";
 import { localFile } from "../utils/LocalFile.js";
-import { storeFilename } from "./shardManager.js";
+import { storeFilename } from "../infrastructure/shardManager.js";
 
 class MockEmbeddings extends Embeddings {
 	private dimensions: number;

@@ -5,7 +5,7 @@ import * as path from "path";
 import * as fs from "fs";
 import { AnySchema, create, search } from "@orama/orama";
 import { persist, restore } from "@orama/plugin-data-persistence";
-import { MdDocRawSchema } from "./vectorStore.js";
+import { MdDocRawSchema } from "src/infrastructure/vectorStore.js";
 
 describe("DocumentRepository", () => {
 	const fileAdapter = new localFile();

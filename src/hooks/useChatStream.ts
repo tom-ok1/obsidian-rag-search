@@ -1,11 +1,9 @@
 import { useState } from "react";
-import type { RagService } from "../search/ragService.js";
 import { ChatContent } from "../types/messages.js";
 import { MessageContent } from "@langchain/core/messages";
+import { ISearchService } from "src/api/controller/modules.js";
 
-export type { ChatContent as Msg };
-
-export function useChatStream(chatService: RagService) {
+export function useChatStream(chatService: ISearchService) {
 	const [messages, setMessages] = useState<ChatContent[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -37,9 +35,7 @@ export function useChatStream(chatService: RagService) {
 		setMessages((prev) => [...prev, userMsg, assistantMsg]);
 
 		try {
-			const {
-				answer: { stream },
-			} = await chatService.search(question);
+			const { answer: stream } = await chatService.search(question);
 
 			for await (const chunk of stream) {
 				const { content } = chunk;

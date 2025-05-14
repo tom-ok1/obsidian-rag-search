@@ -28,7 +28,6 @@ export function createChatGraph(
 		searchType: z
 			.enum(["similarity", "mmr"])
 			.nullable()
-			.default("similarity")
 			.describe(
 				"Search mode: 'similarity' for basic similarity search, 'mmr' for more advanced search using max marginal relevance, which allows for more diverse results."
 			),
@@ -69,7 +68,6 @@ export function createChatGraph(
 		context: Annotation<Document<MdDocMetadata>[]>,
 		answer: Annotation<{
 			stream: IterableReadableStream<AIMessageChunk>;
-			historyStream: IterableReadableStream<AIMessageChunk>;
 		}>,
 		history: Annotation<ChatHistory>,
 		isEnough: Annotation<boolean>,
@@ -111,6 +109,11 @@ export function createChatGraph(
 
 	async function retrieveData(state: typeof stateAnnotation.State) {
 		const { search } = state;
+		if (!search) {
+			throw new Error(
+				"No parameter provided. You may have set the wrong model name."
+			);
+		}
 
 		// MMR search
 		if (
