@@ -146,33 +146,41 @@ export default class MyPlugin extends Plugin {
 	}
 
 	private async insertDocuments() {
-		const files: TFile[] = this.app.vault.getFiles();
-		const rawData = window.localStorage.getItem(this.STORAGE_KEY);
-		const fileMtimeMap: Record<string, number | undefined> = rawData
-			? JSON.parse(rawData)
-			: {};
-		const updatedFiles = files
-			.filter((f) => {
-				const lastInsertedMtime = fileMtimeMap[f.path];
-				if (!lastInsertedMtime) return true;
-				return f.stat.mtime > Number(lastInsertedMtime);
-			})
-			.map(({ path }) => path);
+		try {
+			const files: TFile[] = this.app.vault.getFiles();
+			const rawData = window.localStorage.getItem(this.STORAGE_KEY);
+			const fileMtimeMap: Record<string, number | undefined> = rawData
+				? JSON.parse(rawData)
+				: {};
+			const updatedFiles = files
+				.filter((f) => {
+					const lastInsertedMtime = fileMtimeMap[f.path];
+					if (!lastInsertedMtime) return true;
+					return f.stat.mtime > Number(lastInsertedMtime);
+				})
+				.map(({ path }) => path);
 
-		const documentService = this.serviceManager.getService("document");
-		await documentService.insert(updatedFiles);
+			const documentService = this.serviceManager.getService("document");
+			await documentService.insert(updatedFiles);
 
-		const updatedFilesMtime = files.reduce(
-			(acc, f) => ({
-				...acc,
-				[f.path]: f.stat.mtime,
-			}),
-			{} as Record<string, number>
-		);
-		window.localStorage.setItem(
-			this.STORAGE_KEY,
-			JSON.stringify(updatedFilesMtime)
-		);
+			const updatedFilesMtime = files.reduce(
+				(acc, f) => ({
+					...acc,
+					[f.path]: f.stat.mtime,
+				}),
+				{} as Record<string, number>
+			);
+			window.localStorage.setItem(
+				this.STORAGE_KEY,
+				JSON.stringify(updatedFilesMtime)
+			);
+			new Notice(
+				`Inserted ${updatedFiles.length} documents successfully.`
+			);
+		} catch (error) {
+			console.error("Error inserting documents:", error);
+			new Notice(`Failed to insert documents. ${error.message}`);
+		}
 	}
 
 	openChatView() {
