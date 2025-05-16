@@ -1,4 +1,4 @@
-import { OramaStore } from "src/infrastructure/vectorStore.js";
+import { OramaStore } from "src/api/infrastructure/vectorStore.js";
 import { MarkdownProcessor } from "../infrastructure/markdownProcessor.js";
 import { IDocumentService } from "src/api/controller/modules.js";
 

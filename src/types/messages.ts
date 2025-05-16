@@ -1,4 +1,4 @@
-import { ChatMessage } from "src/infrastructure/chatGraph.js";
+import { ChatMessage } from "src/api/infrastructure/chatGraph.js";
 
 export type ChatContent = ChatMessage & {
 	id: string;
