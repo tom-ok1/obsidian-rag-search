@@ -1,15 +1,15 @@
-import { localFile } from "../utils/LocalFile.js";
+import { NodeFsAdapter } from "../utils/NodeFsAdapter.js";
 import { MarkdownProcessor } from "./markdownProcessor.js";
 import { MD5 } from "crypto-js";
 import * as path from "path";
 
 describe("MarkdownProcessor", () => {
-	let adapter: localFile;
+	let adapter: NodeFsAdapter;
 	let processor: MarkdownProcessor;
 	const sampleFilePath = path.join(__dirname, "../test/sample.md");
 
 	beforeEach(() => {
-		adapter = new localFile();
+		adapter = new NodeFsAdapter();
 		processor = new MarkdownProcessor(adapter);
 	});
 
@@ -22,7 +22,7 @@ describe("MarkdownProcessor", () => {
 		const chunks = await processor.processMarkdownFile(sampleFilePath);
 
 		expect(chunks.length).toBeGreaterThan(1);
-		expect(chunks[0].content).toContain("NOTE TITLE: [[sample.md]]");
+		expect(chunks[0].content).toContain("NOTE TITLE: [[sample]]");
 		expect(chunks[0].documentMetadata.tags).toContain("tag1");
 		expect(chunks[0].documentMetadata.extension).toBe("md");
 	});

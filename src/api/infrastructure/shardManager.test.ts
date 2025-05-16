@@ -1,4 +1,4 @@
-import { localFile } from "../utils/LocalFile.js";
+import { NodeFsAdapter } from "../utils/NodeFsAdapter.js";
 import { ShardManager, storeFilename } from "./shardManager.js";
 import * as path from "path";
 import * as fs from "fs";
@@ -6,7 +6,7 @@ import { AnySchema, create, insert, getByID } from "@orama/orama";
 import { persist } from "@orama/plugin-data-persistence";
 
 describe("ShardManager", () => {
-	const fileAdapter = new localFile();
+	const fileAdapter = new NodeFsAdapter();
 	const testDirPath = path.join(__dirname, "test_shard_manager");
 	const testSchema = {
 		id: "string",
@@ -339,6 +339,7 @@ describe("ShardManager", () => {
 				statSpy.mockImplementation(async () => {
 					// Return mock sizes exceeding 500MB per shard
 					return {
+						type: "file",
 						ctime: Date.now(),
 						mtime: Date.now(),
 						size: 550 * 1024 * 1024, // 550MB
@@ -374,6 +375,7 @@ describe("ShardManager", () => {
 				const statSpy = vi.spyOn(fileAdapter, "stat");
 				statSpy.mockImplementation(async (filePath) => {
 					return {
+						type: "file",
 						ctime: Date.now(),
 						mtime: Date.now(),
 						size: 10 * 1024 * 1024, // 10MB
@@ -408,6 +410,7 @@ describe("ShardManager", () => {
 				const statSpy = vi.spyOn(fileAdapter, "stat");
 				statSpy.mockImplementation(async (filePath) => {
 					return {
+						type: "file",
 						ctime: Date.now(),
 						mtime: Date.now(),
 						size: 250 * 1024 * 1024, // 250MB

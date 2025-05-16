@@ -10,7 +10,6 @@ import { MarkdownProcessor } from "src/api/infrastructure/markdownProcessor.js";
 import { OramaStore } from "src/api/infrastructure/vectorStore.js";
 import { DocumentService } from "src/api/service/document.js";
 import { SearchService } from "src/api/service/search.js";
-import { VaultFile } from "src/api/utils/VaultFile.js";
 
 export interface ISearchService {
 	search(question: string): Promise<{
@@ -38,11 +37,11 @@ export class ServiceManager {
 
 	private app: App | null = null;
 	private dirPath: string = "";
-	private file: VaultFile | null = null;
+
+	// Services
 	private vectorStore: OramaStore | null = null;
 	private chatHistory: ChatHistory | null = null;
 	private markdownProcessor: MarkdownProcessor | null = null;
-
 	private searchService: SearchService | null = null;
 	private documentService: DocumentService | null = null;
 
@@ -60,21 +59,20 @@ export class ServiceManager {
 	public initContext(app: App, dirPath: string): void {
 		this.app = app;
 		this.dirPath = dirPath;
-		this.file = new VaultFile(app);
-		this.markdownProcessor = new MarkdownProcessor(this.file);
+		this.markdownProcessor = new MarkdownProcessor(this.app.vault.adapter);
 	}
 
 	public async initializeServices(
 		embeddings: EmbeddingsInterface,
 		model: BaseChatModel
 	) {
-		if (!this.app || !this.file) {
+		if (!this.app) {
 			throw new Error("Context not initialized. Call initContext first.");
 		}
 
 		this.vectorStore = await OramaStore.init(embeddings, {
 			dirPath: this.dirPath,
-			file: this.file,
+			file: this.app.vault.adapter,
 		});
 
 		const chatGraph = createChatGraph(this.vectorStore, model);

@@ -1,7 +1,7 @@
 import { MD5 } from "crypto-js";
-import { FileAdapter } from "../utils/fileAdapter.js";
 import { ObsidianMetadataExtractor } from "./obsidianMetadataExtractor.js";
 import { MarkdownTextSplitter } from "@langchain/textsplitters";
+import { DataAdapter } from "obsidian";
 
 export type MdDocMetadata = {
 	title?: string;
@@ -14,21 +14,38 @@ export type MdDocMetadata = {
 	[key: string]: any;
 };
 
+function getBasenameAndExtension(filePath: string): {
+	basename: string;
+	extension: string;
+} {
+	const lastSlashIndex = Math.max(
+		filePath.lastIndexOf("/"),
+		filePath.lastIndexOf("\\")
+	);
+	const lastDotIndex = filePath.lastIndexOf(".");
+	const basename = filePath.slice(
+		lastSlashIndex + 1,
+		lastDotIndex !== -1 ? lastDotIndex : undefined
+	);
+	const extension =
+		lastDotIndex !== -1 ? filePath.slice(lastDotIndex + 1) : "";
+	return { basename, extension };
+}
+
 export class MarkdownProcessor {
-	constructor(private readonly file: FileAdapter) {}
+	constructor(private readonly file: DataAdapter) {}
 
 	async readMarkdownFile(filePath: string): Promise<string | undefined> {
-		const extension = await this.file.extname(filePath);
+		const { extension } = getBasenameAndExtension(filePath);
 		if (extension !== "md") return;
-		return (await this.file.read(filePath, "utf-8")) as string;
+		return await this.file.read(filePath);
 	}
 
 	async getFileInfo(
 		filePath: string,
 		content: string
 	): Promise<MdDocMetadata> {
-		const basename = await this.file.basename(filePath);
-		const extension = await this.file.extname(filePath);
+		const { basename, extension } = getBasenameAndExtension(filePath);
 		const stats = await this.file.stat(filePath);
 
 		const obsidianMeta = ObsidianMetadataExtractor.extractMetadata(content);
@@ -37,8 +54,8 @@ export class MarkdownProcessor {
 			title: basename,
 			path: filePath,
 			extension: extension,
-			ctime: stats.ctime,
-			mtime: stats.mtime,
+			ctime: stats?.ctime,
+			mtime: stats?.mtime,
 
 			...(obsidianMeta.frontMatter.title && {
 				title: obsidianMeta.frontMatter.title,

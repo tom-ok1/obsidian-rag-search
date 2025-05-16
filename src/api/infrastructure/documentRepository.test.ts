@@ -1,14 +1,14 @@
-import { localFile } from "../utils/LocalFile.js";
+import { NodeFsAdapter } from "../utils/NodeFsAdapter.js";
 import { DocumentRepository } from "./documentRepository.js";
 import { storeFilename } from "./shardManager.js";
 import * as path from "path";
 import * as fs from "fs";
-import { AnySchema, create, search } from "@orama/orama";
+import { create, search } from "@orama/orama";
 import { persist, restore } from "@orama/plugin-data-persistence";
-import { MdDocRawSchema } from "src/infrastructure/vectorStore.js";
+import { MdDocRawSchema } from "./vectorStore.js";
 
 describe("DocumentRepository", () => {
-	const fileAdapter = new localFile();
+	const fileAdapter = new NodeFsAdapter();
 	const testDirPath = path.join(__dirname, "test_db");
 	const testSchema: MdDocRawSchema = {
 		id: "string",

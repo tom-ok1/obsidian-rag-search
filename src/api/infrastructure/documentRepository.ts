@@ -1,4 +1,3 @@
-import { FileAdapter } from "../utils/fileAdapter.js";
 import {
 	Orama,
 	PartialSchemaDeep,
@@ -12,7 +11,8 @@ import {
 } from "@orama/orama";
 import { MaxMarginalRelevanceSearchOptions } from "@langchain/core/vectorstores";
 import { ShardManager } from "./shardManager.js";
-import { MdDocRawSchema } from "src/infrastructure/vectorStore.js";
+import { MdDocRawSchema } from "./vectorStore.js";
+import { DataAdapter } from "obsidian";
 
 /**
  * OramaDbConfig defines the configuration for a partitioned Orama database
@@ -35,12 +35,12 @@ export class DocumentRepository<T extends MdDocRawSchema> {
 	}
 
 	static async init<T extends MdDocRawSchema>(
-		fileAdapter: FileAdapter,
+		file: DataAdapter,
 		config: DbConfig<T>,
 		language = "english"
 	) {
 		const shardMgr = await ShardManager.init(
-			fileAdapter,
+			file,
 			config.dirPath,
 			config.schema,
 			language

@@ -1,4 +1,3 @@
-import { FileAdapter } from "../utils/fileAdapter.js";
 import {
 	Orama,
 	AnySchema,
@@ -12,9 +11,10 @@ import { HashRing } from "../utils/hashring.js";
 import { LRU } from "../utils/LRU.js";
 import { createTokenizer } from "@orama/tokenizers/japanese";
 import { stopwords as japaneseStopwords } from "@orama/stopwords/japanese";
+import { DataAdapter, normalizePath } from "obsidian";
 
 /**
- * @param id - Shard ID 0-indexed
+ * @param id - Shard ID 1-indexed
  */
 export const storeFilename = (id: number) => `vectorstore-${id}`;
 
@@ -27,7 +27,7 @@ export class ShardManager<T extends AnySchema> {
 	private language: string = "english";
 
 	private constructor(
-		private readonly fileAdapter: FileAdapter,
+		private readonly file: DataAdapter,
 		private readonly dirPath: string,
 		private readonly schema: T,
 		private numOfShardsValue: number,
@@ -43,7 +43,7 @@ export class ShardManager<T extends AnySchema> {
 	}
 
 	private static async create<S extends AnySchema>(
-		fileAdapter: FileAdapter,
+		file: DataAdapter,
 		dirPath: string,
 		schema: S,
 		language: string,
@@ -51,7 +51,7 @@ export class ShardManager<T extends AnySchema> {
 	): Promise<ShardManager<S>> {
 		const defaultShards = 1;
 		const manager = new ShardManager(
-			fileAdapter,
+			file,
 			dirPath,
 			schema,
 			defaultShards,
@@ -63,17 +63,17 @@ export class ShardManager<T extends AnySchema> {
 	}
 
 	private static async load<S extends AnySchema>(
-		fileAdapter: FileAdapter,
+		file: DataAdapter,
 		dirPath: string,
 		schema: S,
 		cacheSize: number = 3
 	): Promise<ShardManager<S>> {
 		const detectedShards = await ShardManager.detectShardCount(
-			fileAdapter,
+			file,
 			dirPath
 		);
 		const manager = new ShardManager(
-			fileAdapter,
+			file,
 			dirPath,
 			schema,
 			detectedShards,
@@ -84,7 +84,7 @@ export class ShardManager<T extends AnySchema> {
 	}
 
 	private static async detectShardCount(
-		fileAdapter: FileAdapter,
+		file: DataAdapter,
 		dirPath: string
 	): Promise<number> {
 		let shardCount = 0;
@@ -92,8 +92,10 @@ export class ShardManager<T extends AnySchema> {
 		let fileExists = true;
 
 		while (fileExists) {
-			const filePath = fileAdapter.join(dirPath, storeFilename(shardIdx));
-			fileExists = await fileAdapter.exists(filePath);
+			const filePath = normalizePath(
+				dirPath + "/" + storeFilename(shardIdx)
+			);
+			fileExists = await file.exists(filePath);
 			if (fileExists) {
 				shardCount++;
 				shardIdx++;
@@ -104,30 +106,18 @@ export class ShardManager<T extends AnySchema> {
 	}
 
 	static async init<S extends AnySchema>(
-		fileAdapter: FileAdapter,
+		file: DataAdapter,
 		dirPath: string,
 		schema: S,
-		language: string = "english",
-		cacheSize: number = 3
+		language: string = "english"
 	): Promise<ShardManager<S>> {
-		const isExists = await fileAdapter.exists(dirPath);
+		const isExists = await file.exists(dirPath);
 		if (isExists) {
-			const manager = await ShardManager.load(
-				fileAdapter,
-				dirPath,
-				schema,
-				cacheSize
-			);
+			const manager = await ShardManager.load(file, dirPath, schema);
 			manager.language = language;
 			return manager;
 		} else {
-			return ShardManager.create(
-				fileAdapter,
-				dirPath,
-				schema,
-				language,
-				cacheSize
-			);
+			return ShardManager.create(file, dirPath, schema, language);
 		}
 	}
 
@@ -135,13 +125,9 @@ export class ShardManager<T extends AnySchema> {
 		const inCache = this.cache.get(idx);
 		if (inCache) return inCache;
 
-		const filePath = this.fileAdapter.join(
-			this.dirPath,
-			storeFilename(idx + 1)
-		);
-		const data = await this.fileAdapter.read(filePath);
-		const bufferData =
-			data instanceof ArrayBuffer ? Buffer.from(data) : data;
+		const filePath = this.shardPath(idx);
+		const data = await this.file.readBinary(filePath);
+		const bufferData = Buffer.from(data);
 		const db = await restore<Orama<T>>("binary", bufferData);
 		db.schema = this.schema;
 		await this.setShard(db, idx);
@@ -156,12 +142,9 @@ export class ShardManager<T extends AnySchema> {
 
 	async persistShard(db: Orama<T>, shardIndex: number): Promise<void> {
 		const data = await persist(db, "binary");
+		const shardPath = this.shardPath(shardIndex);
 
-		await this.fileAdapter.write(
-			storeFilename(shardIndex + 1),
-			this.dirPath,
-			Buffer.from(data)
-		);
+		await this.file.writeBinary(shardPath, Buffer.from(data));
 	}
 
 	private async createShards(): Promise<void> {
@@ -178,15 +161,14 @@ export class ShardManager<T extends AnySchema> {
 		for (let i = 0; i < this.numOfShards; i++) {
 			const filePath = this.shardPath(i);
 			// Skip missing shards
-			const fileExists = await this.fileAdapter.exists(filePath);
+			const fileExists = await this.file.exists(filePath);
 			if (!fileExists) {
 				console.warn(`Shard ${i + 1} not found at ${filePath}`);
 				continue;
 			}
 
-			const data = await this.fileAdapter.read(filePath);
-			const bufferData =
-				data instanceof ArrayBuffer ? Buffer.from(data) : data;
+			const data = await this.file.readBinary(filePath);
+			const bufferData = Buffer.from(data);
 			const db = await restore<Orama<T>>("binary", bufferData);
 			db.schema = this.schema;
 
@@ -214,12 +196,13 @@ export class ShardManager<T extends AnySchema> {
 
 		for (let i = 0; i < this.numOfShards; i++) {
 			const shardPath = this.shardPath(i);
-			const exists = await this.fileAdapter.exists(shardPath);
+			const exists = await this.file.exists(shardPath);
 
 			if (exists) {
 				existingShardCount++;
-				const stats = await this.fileAdapter.stat(shardPath);
-				totalSize += stats.size;
+				const stats = await this.file.stat(shardPath);
+				const size = stats?.size ?? 0;
+				totalSize += size;
 			}
 		}
 
@@ -314,8 +297,8 @@ export class ShardManager<T extends AnySchema> {
 		if (newNumShards < currentNumShards) {
 			for (let i = newNumShards; i < currentNumShards; i++) {
 				const file = this.shardPath(i);
-				if (await this.fileAdapter.exists(file)) {
-					await this.fileAdapter.delete(file);
+				if (await this.file.exists(file)) {
+					await this.file.remove(file);
 				}
 			}
 		}
@@ -378,15 +361,15 @@ export class ShardManager<T extends AnySchema> {
 	}
 
 	private shardPath(idx: number): string {
-		return this.fileAdapter.join(this.dirPath, storeFilename(idx + 1));
+		return normalizePath(this.dirPath + "/" + storeFilename(idx + 1));
 	}
 
 	async reset(): Promise<void> {
 		// Delete all existing shard files
 		for (let i = 0; i < this.numOfShards; i++) {
 			const filePath = this.shardPath(i);
-			if (await this.fileAdapter.exists(filePath)) {
-				await this.fileAdapter.delete(filePath);
+			if (await this.file.exists(filePath)) {
+				await this.file.remove(filePath);
 			}
 		}
 
