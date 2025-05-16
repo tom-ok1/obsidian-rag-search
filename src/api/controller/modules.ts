@@ -26,10 +26,11 @@ export interface IDocumentService {
 interface ServiceMap {
 	search: ISearchService;
 	document: IDocumentService;
+	history: ChatHistory;
 }
 
-type NullableServiceMap = {
-	[K in keyof ServiceMap]: ServiceMap[K] | null;
+type Nullable<T> = {
+	[P in keyof T]: T[P] | null;
 };
 
 export class ServiceManager {
@@ -59,7 +60,6 @@ export class ServiceManager {
 	public initContext(app: App, dirPath: string): void {
 		this.app = app;
 		this.dirPath = dirPath;
-		this.markdownProcessor = new MarkdownProcessor(this.app.vault.adapter);
 	}
 
 	public async initializeServices(
@@ -75,23 +75,27 @@ export class ServiceManager {
 			file: this.app.vault.adapter,
 		});
 
-		const chatGraph = createChatGraph(this.vectorStore, model);
+		// private services
+		const chatGraph = createChatGraph({
+			model,
+			vectorStore: this.vectorStore,
+		});
+		this.markdownProcessor = new MarkdownProcessor(this.app.vault.adapter);
 
-		if (!this.chatHistory) {
-			this.chatHistory = new ChatHistory();
-		}
-
+		// public services
+		this.chatHistory = new ChatHistory();
 		this.searchService = new SearchService(chatGraph, this.chatHistory);
 		this.documentService = new DocumentService(
 			this.vectorStore,
-			this.markdownProcessor!
+			this.markdownProcessor
 		);
 	}
 
 	public getService<K extends keyof ServiceMap>(name: K): ServiceMap[K] {
-		const serviceMap: NullableServiceMap = {
+		const serviceMap: Nullable<ServiceMap> = {
 			search: this.searchService,
 			document: this.documentService,
+			history: this.chatHistory,
 		};
 
 		const service = serviceMap[name];

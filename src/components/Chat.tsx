@@ -6,7 +6,7 @@ import { ChatInput } from "./ChatInput.js";
 import { ISearchService } from "src/api/controller/modules.js";
 
 export const ChatApp: React.FC<{ chat: ISearchService }> = ({ chat }) => {
-	const { messages, isLoading, ask, error } = useChatStream(chat);
+	const { messages, isLoading, ask } = useChatStream(chat);
 
 	return (
 		<Stack height="100%" bgcolor="transparent">

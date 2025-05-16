@@ -6,12 +6,10 @@ import { ISearchService } from "src/api/controller/modules.js";
 export function useChatStream(chatService: ISearchService) {
 	const [messages, setMessages] = useState<ChatContent[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
-	const [error, setError] = useState<string | null>(null);
 
 	const ask = async (question: string) => {
 		if (!question.trim()) return;
 
-		setError(null);
 		setIsLoading(true);
 
 		// Create user message with timestamp as id
@@ -66,10 +64,6 @@ export function useChatStream(chatService: ISearchService) {
 				return newMessages;
 			});
 		} catch (err) {
-			setError(
-				err instanceof Error ? err.message : "Failed to get response"
-			);
-
 			setMessages((prev) => {
 				const newMessages = [...prev];
 				const assistantMsgIndex = newMessages.length - 1;
@@ -85,12 +79,13 @@ export function useChatStream(chatService: ISearchService) {
 
 				return newMessages;
 			});
+			console.error("Error while streaming:", err);
 		} finally {
 			setIsLoading(false);
 		}
 	};
 
-	return { messages, isLoading, ask, error };
+	return { messages, isLoading, ask };
 }
 
 function formatChatContent(content: MessageContent) {
