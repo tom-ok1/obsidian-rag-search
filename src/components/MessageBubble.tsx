@@ -22,7 +22,7 @@ export const MessageBubbleUser: React.FC<MessageBubbleUserProps> = ({
 			style={style}
 		>
 			<Paper
-				elevation={1}
+				elevation={0}
 				sx={{
 					position: "relative",
 					maxWidth: 640,
@@ -63,6 +63,7 @@ export const MessageBubbleAssistant: React.FC<MessageBubbleAssistantProps> = ({
 	style,
 }) => {
 	const showSkeleton = msg.loading && msg.content === "";
+	const theme = useTheme();
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 8 }}
@@ -71,15 +72,17 @@ export const MessageBubbleAssistant: React.FC<MessageBubbleAssistantProps> = ({
 			style={style}
 		>
 			<Paper
-				elevation={1}
+				elevation={0}
 				sx={{
 					position: "relative",
 					maxWidth: 640,
 					px: 2,
 					py: 1.5,
 					alignSelf: "flex-start",
-					bgcolor: "var(--background-primary)",
-					color: "var(--text-normal)",
+					bgcolor: "transparent",
+					color: theme.palette.getContrastText(
+						theme.palette.primary.main
+					),
 					whiteSpace: "pre-wrap",
 					backgroundImage: "none",
 					userSelect: "text",
