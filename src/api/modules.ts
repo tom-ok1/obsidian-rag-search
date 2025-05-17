@@ -19,8 +19,7 @@ export interface ISearchService {
 }
 
 export interface IDocumentService {
-	insert(filePaths: string[]): Promise<void>;
-	reset(): Promise<void>;
+	reindex(filePaths: string[]): Promise<void>;
 }
 
 interface ServiceMap {

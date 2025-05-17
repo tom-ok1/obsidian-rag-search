@@ -108,8 +108,8 @@ export default class MyPlugin extends Plugin {
 			// Files are available after the layout is ready
 			this.addCommand({
 				id: "rag-chat-react-search",
-				name: "insert documents",
-				callback: this.insertDocuments.bind(this),
+				name: "reindex documents",
+				callback: this.reindexDocuments.bind(this),
 			});
 		});
 	}
@@ -145,38 +145,12 @@ export default class MyPlugin extends Plugin {
 		}
 	}
 
-	private async insertDocuments() {
+	private async reindexDocuments() {
 		try {
-			const files: TFile[] = this.app.vault.getFiles();
-			const rawData = window.localStorage.getItem(this.STORAGE_KEY);
-			const fileMtimeMap: Record<string, number | undefined> = rawData
-				? JSON.parse(rawData)
-				: {};
-			const updatedFiles = files
-				.filter((f) => {
-					const lastInsertedMtime = fileMtimeMap[f.path];
-					if (!lastInsertedMtime) return true;
-					return f.stat.mtime > Number(lastInsertedMtime);
-				})
-				.map(({ path }) => path);
-
-			const documentService = this.serviceManager.getService("document");
-			await documentService.insert(updatedFiles);
-
-			const updatedFilesMtime = files.reduce(
-				(acc, f) => ({
-					...acc,
-					[f.path]: f.stat.mtime,
-				}),
-				{} as Record<string, number>
-			);
-			window.localStorage.setItem(
-				this.STORAGE_KEY,
-				JSON.stringify(updatedFilesMtime)
-			);
-			new Notice(
-				`Inserted ${updatedFiles.length} documents successfully.`
-			);
+			const filePaths = this.app.vault.getFiles().map(({ path }) => path);
+			const docService = this.serviceManager.getService("document");
+			await docService.reindex(filePaths);
+			new Notice(`Reindex ${filePaths.length} documents successfully.`);
 		} catch (error) {
 			console.error("Error inserting documents:", error);
 			new Notice(`Failed to insert documents. ${error.message}`);

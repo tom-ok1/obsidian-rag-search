@@ -8,7 +8,8 @@ export class DocumentService implements IDocumentService {
 		private readonly markdownProcessor: MarkdownProcessor
 	) {}
 
-	async insert(filePaths: string[]) {
+	async reindex(filePaths: string[]) {
+		await this.vectorStore.reset();
 		const processedMarkdownFiles =
 			await this.markdownProcessor.processMarkdownFiles(filePaths);
 		const documents = processedMarkdownFiles.map((file) => ({
@@ -17,9 +18,5 @@ export class DocumentService implements IDocumentService {
 			metadata: file.documentMetadata,
 		}));
 		await this.vectorStore.addDocuments(documents);
-	}
-
-	async reset() {
-		await this.vectorStore.reset();
 	}
 }
