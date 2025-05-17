@@ -170,7 +170,6 @@ describe("DocumentRepository", () => {
 		});
 
 		// Add test documents to mock databases
-		console.log("testDocs", documents);
 		await insertMultiple(mockDb1, [documents[0]]);
 		await insertMultiple(mockDb2, [documents[1]]);
 
