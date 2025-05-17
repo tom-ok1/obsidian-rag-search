@@ -6,7 +6,6 @@ import {
 	Plugin,
 	PluginSettingTab,
 	Setting,
-	TFile,
 	WorkspaceLeaf,
 } from "obsidian";
 import React from "react";
@@ -17,7 +16,7 @@ import {
 	EmbeddingModelProviders,
 	getChatModel,
 	getEmbeddingModel,
-} from "src/api/infrastructure/models.js";
+} from "src/api/models.js";
 import { ServiceManager } from "src/api/modules.js";
 
 interface EmbeddingModel {
@@ -75,7 +74,7 @@ const DEFAULT_SETTINGS: PluginSettings = {
 	googleProjectId: "",
 };
 
-export default class MyPlugin extends Plugin {
+export default class RAGChatPlugin extends Plugin {
 	private serviceManager!: ServiceManager;
 	private chatView: ChatView | null;
 	private readonly STORAGE_KEY = "rag-search-fileMtimeMap";
@@ -116,23 +115,23 @@ export default class MyPlugin extends Plugin {
 
 	private async initializeChatModel() {
 		try {
-			const model = getChatModel(
-				this.settings.chatModelProvider,
-				this.settings.chatModelName,
-				{
+			const model = getChatModel({
+				provider: this.settings.chatModelProvider,
+				chatModelName: this.settings.chatModelName,
+				apiKeys: {
 					OPENAI: this.settings.openaiApiKey,
 					GOOGLE: this.settings.googleApiKey,
 					ANTHROPIC: this.settings.anthropicApiKey,
 				},
-				this.settings.googleProjectId
-			);
+				googleProjectId: this.settings.googleProjectId,
+			});
 
-			const embeddings = getEmbeddingModel(
-				this.settings.embeddingModelProvider,
-				this.settings.embeddingModel,
-				this.settings.googleProjectId,
-				this.settings.openaiApiKey
-			);
+			const embeddings = getEmbeddingModel({
+				provider: this.settings.embeddingModelProvider,
+				embeddingModelName: this.settings.embeddingModel,
+				googleProjectId: this.settings.googleProjectId,
+				apiKey: this.settings.openaiApiKey,
+			});
 			await this.serviceManager.initializeServices(embeddings, model);
 
 			// update react component state
@@ -226,9 +225,9 @@ export class ChatView extends ItemView {
 }
 
 class RAGSearchSettingsTab extends PluginSettingTab {
-	plugin: MyPlugin;
+	plugin: RAGChatPlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: RAGChatPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}

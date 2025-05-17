@@ -5,7 +5,7 @@ import {
 	GoogleBaseLLMInput,
 	GoogleConnectionParams,
 } from "@langchain/google-common";
-import { GAuthClient } from "./auth.js";
+import { GAuthClient } from "./infrastructure/auth.js";
 import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
@@ -42,12 +42,13 @@ class ObsidianChatVertexAI extends ChatVertexAI {
 	}
 }
 
-export function getChatModel(
-	provider: ChatModelProviders,
-	chatModelName: string,
-	apiKeys: { [K in ChatModelProviders]?: string | undefined },
-	googleProjectId?: string
-): BaseChatModel {
+export function getChatModel(param: {
+	provider: ChatModelProviders;
+	chatModelName: string;
+	apiKeys: { [K in ChatModelProviders]?: string | undefined };
+	googleProjectId?: string;
+}): BaseChatModel {
+	const { provider, chatModelName, apiKeys, googleProjectId } = param;
 	switch (provider) {
 		case ChatModelProviders.VERTEXAI:
 			return new ObsidianChatVertexAI({
@@ -81,12 +82,13 @@ export function getChatModel(
 	}
 }
 
-export function getEmbeddingModel(
-	provider: EmbeddingModelProviders,
-	embeddingModelName: string,
-	googleProjectId?: string,
-	apiKey?: string
-): EmbeddingsInterface {
+export function getEmbeddingModel(param: {
+	provider: EmbeddingModelProviders;
+	embeddingModelName: string;
+	googleProjectId?: string;
+	apiKey?: string;
+}): EmbeddingsInterface {
+	const { provider, embeddingModelName, googleProjectId, apiKey } = param;
 	switch (provider) {
 		case EmbeddingModelProviders.VERTEXAI:
 			return new ObsidianVertexAIEmbeddings({
@@ -100,5 +102,9 @@ export function getEmbeddingModel(
 				model: embeddingModelName,
 				apiKey,
 			});
+		default:
+			throw new Error(
+				`Unsupported embedding model provider: ${provider}`
+			);
 	}
 }
