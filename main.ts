@@ -18,7 +18,7 @@ import {
 	getChatModel,
 	getEmbeddingModel,
 } from "src/api/models.js";
-import { ServiceManager } from "src/api/controller/modules.js";
+import { ServiceManager } from "src/api/modules.js";
 
 interface EmbeddingModel {
 	name: string;

@@ -1,4 +1,4 @@
-import { ISearchService } from "src/api/controller/modules.js";
+import { ISearchService } from "src/api/modules.js";
 import { createChatGraph } from "../infrastructure/chatGraph.js";
 import { ChatHistory } from "../infrastructure/chatHistory.js";
 

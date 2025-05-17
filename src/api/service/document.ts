@@ -1,6 +1,6 @@
 import { OramaStore } from "src/api/infrastructure/vectorStore.js";
 import { MarkdownProcessor } from "../infrastructure/markdownProcessor.js";
-import { IDocumentService } from "src/api/controller/modules.js";
+import { IDocumentService } from "src/api/modules.js";
 
 export class DocumentService implements IDocumentService {
 	constructor(
