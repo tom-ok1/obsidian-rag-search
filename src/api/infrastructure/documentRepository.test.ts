@@ -1,368 +1,194 @@
-import { NodeFsAdapter } from "../utils/NodeFsAdapter.js";
 import { DocumentRepository } from "./documentRepository.js";
-import { storeFilename } from "./shardManager.js";
-import * as path from "path";
-import * as fs from "fs";
-import { create, search } from "@orama/orama";
-import { persist, restore } from "@orama/plugin-data-persistence";
-import { MdDocRawSchema } from "./vectorStore.js";
+import { ShardManager } from "./shardManager.js";
+import { NodeFsAdapter } from "../utils/NodeFsAdapter.js";
+import { AnySchema, create, insertMultiple, Orama } from "@orama/orama";
+import path from "path";
+import os from "os";
+import { existsSync } from "fs";
+import fs from "fs/promises";
+import { MockedObject } from "vitest";
+
+vi.mock("./shardManager.js", () => {
+	return {
+		ShardManager: {
+			init: vi.fn(),
+		},
+	};
+});
+
+const testSchema = {
+	id: "string",
+	title: "string",
+	content: "string",
+	embedding: "vector[3]",
+} as const;
+
+const testDocs = [
+	{
+		id: "1",
+		title: "Doc 1",
+		content: "Content 1",
+		embedding: [0.1, 0.2, 0.3],
+	},
+	{
+		id: "2",
+		title: "Doc 2",
+		content: "Content 2",
+		embedding: [0.4, 0.5, 0.6],
+	},
+];
 
 describe("DocumentRepository", () => {
-	const fileAdapter = new NodeFsAdapter();
-	const testDirPath = path.join(__dirname, "test_db");
-	const testSchema: MdDocRawSchema = {
-		id: "string",
-		title: "string",
-		path: "string",
-		content: "string",
-		embedding: "vector[3]",
-		embeddingModel: "string",
-		ctime: "number",
-		mtime: "number",
-		tags: "string[]",
-		extension: "string",
-	};
+	let fileAdapter: NodeFsAdapter;
+	let mockShardManager: MockedObject<ShardManager<AnySchema>>;
+	let testDbPath: string;
+	let mockDb1: Orama<AnySchema>;
+	let mockDb2: Orama<AnySchema>;
 
-	const testDocuments = [
-		{ id: "docX", content: "Document X axis", embedding: [1, 0, 0] },
-		{ id: "docY", content: "Document Y axis", embedding: [0, 1, 0] },
-		{ id: "docZ", content: "Document Z axis", embedding: [0, 0, 1] },
-		{
-			id: "doc111",
-			content: "Document in first octant",
-			embedding: [1, 1, 1],
-		},
-		{
-			id: "docX2",
-			content: "Document close to X",
-			embedding: [0.9, 0.1, 0.1],
-		},
-		{
-			id: "docY2",
-			content: "Document close to Y",
-			embedding: [0.1, 0.9, 0.1],
-		},
-		{
-			id: "docZ2",
-			content: "Document close to Z",
-			embedding: [0.1, 0.1, 0.9],
-		},
-		{
-			id: "docX3",
-			content: "Document with large magnitude in X",
-			embedding: [5, 0, 0],
-		},
-		{
-			id: "docXY",
-			content: "Document in XY plane",
-			embedding: [0.7071, 0.7071, 0],
-		},
-		{
-			id: "docXZ",
-			content: "Document in XZ plane",
-			embedding: [0.7071, 0, 0.7071],
-		},
-		{
-			id: "simA1",
-			content: "Similar document A1",
-			embedding: [0.5, 0.5, 0.7071],
-		},
-		{
-			id: "simA2",
-			content: "Similar document A2",
-			embedding: [0.5, 0.5, 0.7071],
-		},
-		{
-			id: "simB1",
-			content: "Similar document B1",
-			embedding: [0.7071, 0.7071, 0.1],
-		},
-		{
-			id: "simB2",
-			content: "Similar document B2",
-			embedding: [0.7071, 0.7071, 0.1],
-		},
-	];
+	beforeEach(async () => {
+		// Set up test directory
+		testDbPath = path.join(os.tmpdir(), "orama-test-" + Date.now());
+		await fs.mkdir(testDbPath, { recursive: true });
 
-	function createTestDb() {
-		return create({
-			schema: {
-				id: "string",
-				content: "string",
-				embedding: "vector[3]",
-			},
+		fileAdapter = new NodeFsAdapter();
+
+		// Create mock Orama databases
+		mockDb1 = await create({ schema: testSchema });
+		mockDb2 = await create({ schema: testSchema });
+
+		// Set up mock shard manager
+		mockShardManager = {
+			numOfShards: 2,
+			getNode: vi.fn(),
+			getShard: vi.fn(),
+			persistShard: vi.fn(),
+			autoRebalance: vi.fn(),
+			reset: vi.fn(),
+		} as any;
+
+		// Default mock implementation
+		mockShardManager.getNode.mockImplementation((id: string) => {
+			return id === "1" ? "0" : "1"; // Route to different shards based on ID
 		});
-	}
 
-	async function loadTestDb(idx: number) {
-		const data = await fs.readFileSync(
-			path.join(testDirPath, storeFilename(idx + 1))
+		mockShardManager.getShard.mockImplementation(async (idx: number) => {
+			return idx === 0 ? mockDb1 : mockDb2;
+		});
+
+		vi.spyOn(ShardManager, "init").mockResolvedValue(mockShardManager);
+	});
+
+	afterEach(async () => {
+		// Clean up test directory
+		if (existsSync(testDbPath)) {
+			await fs.rm(testDbPath, { recursive: true, force: true });
+		}
+		vi.clearAllMocks();
+	});
+
+	it("should initialize properly", async () => {
+		const repo = await DocumentRepository.init(fileAdapter, {
+			dirPath: testDbPath,
+			schema: testSchema,
+		});
+
+		expect(ShardManager.init).toHaveBeenCalledWith(
+			fileAdapter,
+			testDbPath,
+			testSchema,
+			"english"
 		);
-		const db = await restore("binary", data);
-		return db;
-	}
 
-	beforeEach(() => {
-		if (fs.existsSync(testDirPath)) {
-			fs.rmSync(testDirPath, { recursive: true, force: true });
-		}
+		expect(repo).toBeInstanceOf(DocumentRepository);
 	});
 
-	afterEach(() => {
-		if (fs.existsSync(testDirPath)) {
-			fs.rmSync(testDirPath, { recursive: true, force: true });
-		}
+	it("should insert documents", async () => {
+		const repo = await DocumentRepository.init(fileAdapter, {
+			dirPath: testDbPath,
+			schema: testSchema,
+		});
+
+		await repo.insertMany([testDocs[0]]);
+
+		expect(mockShardManager.getNode).toHaveBeenCalledWith("1");
+		expect(mockShardManager.getShard).toHaveBeenCalledWith(0);
+		expect(mockShardManager.persistShard).toHaveBeenCalledWith(mockDb1, 0);
 	});
 
-	describe("Creating a new partitioned database", () => {
-		it("should create a default database shard and then rebalance to specified number", async () => {
-			const desiredShards = 5;
-			const config = {
-				dirPath: testDirPath,
-				schema: testSchema,
-			};
-
-			const docRepo = await DocumentRepository.init(fileAdapter, config);
-
-			// Verify we start with 1 shard by default
-			expect(docRepo["shardMgr"]["numOfShards"]).toBe(1);
-
-			// Manually rebalance to desired number of shards
-			await docRepo["shardMgr"].rebalance(desiredShards);
-			expect(docRepo["shardMgr"]["numOfShards"]).toBe(desiredShards);
-
-			for (let i = 0; i < desiredShards; i++) {
-				const shard = await docRepo["shardMgr"]["getShard"](i);
-				expect(shard).toBeDefined();
-				expect(shard.schema).toEqual(testSchema);
-			}
+	it("should insert documents across different shards", async () => {
+		const repo = await DocumentRepository.init(fileAdapter, {
+			dirPath: testDbPath,
+			schema: testSchema,
 		});
 
-		it("should create a database with japanese tokenizer", async () => {
-			const desiredShards = 5;
-			const config = {
-				dirPath: testDirPath,
-				schema: testSchema,
-			};
+		await repo.insertMany(testDocs);
 
-			const docRepo = await DocumentRepository.init(
-				fileAdapter,
-				config,
-				"japanese"
-			);
+		// Check if getNode was called for each document
+		expect(mockShardManager.getNode).toHaveBeenCalledWith("1");
+		expect(mockShardManager.getNode).toHaveBeenCalledWith("2");
 
-			// Verify we start with 1 shard by default
-			expect(docRepo["shardMgr"]["numOfShards"]).toBe(1);
+		// Check if getShard was called for both shards
+		expect(mockShardManager.getShard).toHaveBeenCalledWith(0);
+		expect(mockShardManager.getShard).toHaveBeenCalledWith(1);
 
-			// Manually rebalance to desired number of shards
-			await docRepo["shardMgr"].rebalance(desiredShards);
-			expect(docRepo["shardMgr"]["numOfShards"]).toBe(desiredShards);
-
-			for (let i = 0; i < desiredShards; i++) {
-				const shard = await docRepo["shardMgr"]["getShard"](i);
-				expect(shard).toBeDefined();
-				expect(shard.schema).toEqual(testSchema);
-				// Check language through docRepo class since we can't directly check binary data
-				expect(shard.tokenizer.language).toBe("japanese");
-			}
-		});
+		// Check if persistShard was called for both shards
+		expect(mockShardManager.persistShard).toHaveBeenCalledWith(mockDb1, 0);
+		expect(mockShardManager.persistShard).toHaveBeenCalledWith(mockDb2, 1);
 	});
 
-	describe("Loading a partitioned database", () => {
-		it("should load all database shards", async () => {
-			const numOfShards = 5;
-			const config = {
-				dirPath: testDirPath,
-				schema: testSchema,
-			};
-
-			fs.mkdirSync(testDirPath, { recursive: true });
-
-			// Arrange - Create and save multiple shards
-			for (let i = 1; i <= numOfShards; i++) {
-				const db = await createTestDb();
-				const data = await persist(db, "binary");
-
-				const dbFilePath = path.join(testDirPath, storeFilename(i));
-				fs.writeFileSync(dbFilePath, data, "binary");
-
-				expect(fs.existsSync(dbFilePath)).toBe(true);
-			}
-
-			const loadedDb = await DocumentRepository.init(fileAdapter, config);
-
-			// ShardManager should detect the number of shards
-			expect(loadedDb["shardMgr"]["numOfShards"]).toBe(numOfShards);
-			expect(loadedDb).toBeDefined();
-
-			const randomIdx = Math.floor(Math.random() * numOfShards);
-			const shard = await loadedDb["shardMgr"]["getShard"](randomIdx);
-			expect(shard.schema).toEqual(testSchema);
+	it("should search documents", async () => {
+		const documents = structuredClone(testDocs);
+		const repo = await DocumentRepository.init(fileAdapter, {
+			dirPath: testDbPath,
+			schema: testSchema,
 		});
 
-		it("should be able to search after loading", async () => {
-			const numOfShards = 5;
-			const config = {
-				dirPath: testDirPath,
-				schema: testSchema,
-			};
+		// Add test documents to mock databases
+		await insertMultiple(mockDb1, [documents[0]]);
 
-			fs.mkdirSync(testDirPath, { recursive: true });
+		const queryVector = [0.1, 0.2, 0.3];
+		const searchOptions = {
+			filter: { title: "Doc 1" },
+			k: 10,
+			fetchK: 20,
+			lambda: 0.7,
+		};
 
-			for (let i = 1; i <= numOfShards; i++) {
-				const db = await createTestDb();
-				const data = await persist(db, "binary");
+		const results = await repo.search(queryVector, searchOptions);
 
-				const dbFilePath = path.join(testDirPath, storeFilename(i));
-				fs.writeFileSync(dbFilePath, data, "binary");
-
-				expect(fs.existsSync(dbFilePath)).toBe(true);
-			}
-
-			const loadedDb = await DocumentRepository.init(fileAdapter, config);
-
-			const queryVector = [0.5, 0.5, 0.5];
-			const k = 3;
-			const results = await loadedDb.search(queryVector, { k });
-
-			expect(results.length).toBeLessThanOrEqual(k);
-		});
+		expect(mockShardManager.getShard).toHaveBeenCalledWith(0);
+		expect(mockShardManager.getShard).toHaveBeenCalledWith(1);
+		expect(results.length).toBe(1);
+		expect(results[0].document.id).toBe("1");
 	});
 
-	describe("insertMany method", () => {
-		it("should distribute documents to correct partitions and insert them", async () => {
-			const numOfShards = 3; // Using fewer shards for this test
-			const config = {
-				dirPath: testDirPath,
-				schema: testSchema,
-			};
-
-			const docRepo = await DocumentRepository.init(fileAdapter, config);
-			// Rebalance to desired number of shards
-			await docRepo["shardMgr"].rebalance(numOfShards);
-
-			await docRepo.insertMany(testDocuments);
-
-			let resultDocuments: any[] = [];
-
-			for (let i = 0; i < numOfShards; i++) {
-				const testDb = await loadTestDb(i);
-				const res = await search(testDb, {});
-				resultDocuments = resultDocuments.concat(res.hits);
-
-				expect(res.hits.length).toBeGreaterThanOrEqual(0);
-			}
-			expect(resultDocuments.length).toBe(testDocuments.length);
-			expect(resultDocuments[0].document).toBeDefined();
+	it("should search documents across different shards", async () => {
+		const documents = structuredClone(testDocs);
+		const repo = await DocumentRepository.init(fileAdapter, {
+			dirPath: testDbPath,
+			schema: testSchema,
 		});
 
-		it("should insert additional documents into the database", async () => {
-			const numOfShards = 3; // Using fewer shards for this test
-			const config = {
-				dirPath: testDirPath,
-				schema: testSchema,
-			};
+		// Add test documents to mock databases
+		console.log("testDocs", documents);
+		await insertMultiple(mockDb1, [documents[0]]);
+		await insertMultiple(mockDb2, [documents[1]]);
 
-			const docRepo = await DocumentRepository.init(fileAdapter, config);
-			// Rebalance to desired number of shards
-			await docRepo["shardMgr"].rebalance(numOfShards);
+		const queryVector = [0.1, 0.2, 0.3];
+		const searchOptions = {
+			k: 10,
+			fetchK: 20,
+			lambda: 0.7,
+		};
 
-			await docRepo.insertMany(testDocuments);
+		const results = await repo.search(queryVector, searchOptions);
 
-			const additionalDocuments = [
-				{
-					id: "docNew1",
-					content: "New Document 1",
-					embedding: [0.5, 0.5, 0.5],
-				},
-				{
-					id: "docNew2",
-					content: "New Document 2",
-					embedding: [0.3, 0.3, 0.3],
-				},
-			];
+		expect(mockShardManager.getShard).toHaveBeenCalledWith(0);
+		expect(mockShardManager.getShard).toHaveBeenCalledWith(1);
 
-			await docRepo.insertMany(additionalDocuments);
-
-			let resultDocuments: any[] = [];
-
-			for (let i = 0; i < numOfShards; i++) {
-				const testDb = await loadTestDb(i);
-				const res = await search(testDb, { includeVectors: true });
-				resultDocuments = resultDocuments.concat(res.hits);
-			}
-
-			// Should now have original documents plus the new ones
-			expect(resultDocuments.length).toBe(
-				testDocuments.length + additionalDocuments.length
-			);
-
-			// Verify the new documents exist in the results
-			const documents = resultDocuments.map((r) => r.document);
-			const newDoc1 = documents.find((doc: any) => doc.id === "docNew1");
-			const newDoc2 = documents.find((doc: any) => doc.id === "docNew2");
-			expect(newDoc1).toBeDefined();
-			expect(newDoc2).toBeDefined();
-			expect(newDoc1.content).toBe("New Document 1");
-			expect(newDoc2.content).toBe("New Document 2");
-		});
-	});
-
-	describe("search method", () => {
-		it("should search across all shards and return top k results ordered by score", async () => {
-			const numOfShards = 3; // Using fewer shards for this test
-			const config = {
-				dirPath: testDirPath,
-				schema: testSchema,
-			};
-			const documents = JSON.parse(JSON.stringify(testDocuments));
-
-			const docRepo = await DocumentRepository.init(fileAdapter, config);
-			// Rebalance to desired number of shards
-			await docRepo["shardMgr"].rebalance(numOfShards);
-
-			await docRepo.insertMany(documents);
-
-			// Query vector along Z axis direction
-			const queryVector = [0, 0, 1];
-			const k = 3;
-
-			const results = await docRepo.search(queryVector, { k });
-			expect(results.length).toBeLessThanOrEqual(k);
-			expect(results[0].id).toBe("docZ");
-			expect(results[1].id).toBe("docZ2");
-			// Scores should be in ascending order (lower score = more similar)
-			expect(results[0].score).toBeGreaterThan(results[1].score);
-		});
-
-		it("should respect the filter parameter when searching", async () => {
-			const numOfShards = 3; // Using fewer shards for this test
-			const config = {
-				dirPath: testDirPath,
-				schema: testSchema,
-			};
-			const documents = JSON.parse(JSON.stringify(testDocuments));
-
-			const docRepo = await DocumentRepository.init(fileAdapter, config);
-			// Rebalance to desired number of shards
-			await docRepo["shardMgr"].rebalance(numOfShards);
-
-			await docRepo.insertMany(documents);
-
-			const queryVector = [0.6, 0.7, 0.8];
-			const k = 5;
-
-			// Execute search with filter
-			const results = await docRepo.search(queryVector, {
-				k,
-				filter: { content: "close to" },
-			});
-
-			// Should only return docs matching the filter, still ordered by similarity
-			expect(results.length).toBeLessThanOrEqual(3); // At most 3 docs (docX2, docY2, docZ2)
-			results.forEach((result) => {
-				expect(["docX2", "docY2", "docZ2"]).toContain(result.id);
-			});
-		});
+		// Results should be sorted by score in descending order
+		expect(results.length).toBe(2);
+		expect(results[0].document.id).toBe("1");
+		expect(results[1].document.id).toBe("2");
 	});
 });

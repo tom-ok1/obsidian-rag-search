@@ -8,10 +8,10 @@ import {
 	Schema,
 	MODE_VECTOR_SEARCH,
 	insertMultiple,
+	AnySchema,
 } from "@orama/orama";
 import { MaxMarginalRelevanceSearchOptions } from "@langchain/core/vectorstores";
 import { ShardManager } from "./shardManager.js";
-import { MdDocRawSchema } from "./vectorStore.js";
 import { DataAdapter } from "obsidian";
 
 /**
@@ -19,7 +19,7 @@ import { DataAdapter } from "obsidian";
  * @param dirPath - Directory path to store the database files
  * @param schema - Schema definition for the database
  */
-interface DbConfig<T extends MdDocRawSchema> {
+interface DbConfig<T extends AnySchema> {
 	dirPath: string;
 	schema: T;
 }
@@ -27,14 +27,14 @@ interface DbConfig<T extends MdDocRawSchema> {
 /**
  * DocumentRepository manages partitioned Orama databases
  */
-export class DocumentRepository<T extends MdDocRawSchema> {
+export class DocumentRepository<T extends AnySchema> {
 	private shardMgr: ShardManager<T>;
 
 	private constructor(shardMgr: ShardManager<T>) {
 		this.shardMgr = shardMgr;
 	}
 
-	static async init<T extends MdDocRawSchema>(
+	static async init<T extends AnySchema>(
 		file: DataAdapter,
 		config: DbConfig<T>,
 		language = "english"

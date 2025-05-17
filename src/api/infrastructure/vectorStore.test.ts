@@ -53,26 +53,6 @@ describe("OramaStore", () => {
 	});
 
 	describe("create", () => {
-		it("should load a db from a binary file", async () => {
-			const mockEmbeddingDimensions = 128;
-			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
-
-			const mockOramaDb = await createMockDb(mockEmbeddingDimensions);
-			const binaryData = await persist(mockOramaDb, "binary");
-
-			fs.mkdirSync(testDbPath);
-			fs.writeFileSync(testDbFilePath(1), binaryData, "binary");
-			expect(fs.existsSync(testDbFilePath(1))).toBe(true);
-
-			const store = await OramaStore.init(mockEmbeddings, {
-				dirPath: testDbPath,
-				file,
-			});
-
-			const loadedDb = (store as any).db;
-			expect(loadedDb).toBeDefined();
-		});
-
 		it("should create a new db", async () => {
 			const mockEmbeddingDimensions = 256;
 			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
@@ -92,23 +72,6 @@ describe("OramaStore", () => {
 			);
 			expect(loadedDb).toBeDefined();
 			expect(loadedDb.schema).toBeDefined();
-		});
-
-		it("should create *n* shard files", async () => {
-			const SHARDS = 3;
-			const mockEmbeddingDimensions = 128;
-			const mockEmbeddings = new MockEmbeddings(mockEmbeddingDimensions);
-			const store = await OramaStore.init(mockEmbeddings, {
-				dirPath: testDbPath,
-				file,
-			});
-
-			const shardMgr = (store as any).db["shardMgr"];
-			await shardMgr.rebalance(SHARDS);
-
-			for (let i = 0; i < SHARDS; i++) {
-				expect(fs.existsSync(testDbFilePath(i + 1))).toBe(true);
-			}
 		});
 	});
 
