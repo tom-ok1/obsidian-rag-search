@@ -5,7 +5,7 @@ import { AIMessageChunk } from "@langchain/core/messages";
 import { IterableReadableStream } from "@langchain/core/utils/stream";
 import { App } from "obsidian";
 import { createChatGraph } from "src/api/infrastructure/chatGraph.js";
-import { ChatHistory } from "src/api/infrastructure/chatHistory.js";
+import { ChatHistory } from "src/api/service/chatHistory.js";
 import { MarkdownProcessor } from "src/api/infrastructure/markdownProcessor.js";
 import { OramaStore } from "src/api/infrastructure/vectorStore.js";
 import { DocumentService } from "src/api/service/document.js";

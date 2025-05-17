@@ -1,6 +1,6 @@
 import { ISearchService } from "src/api/modules.js";
 import { createChatGraph } from "../infrastructure/chatGraph.js";
-import { ChatHistory } from "../infrastructure/chatHistory.js";
+import { ChatHistory } from "./chatHistory.js";
 
 type ChatGraph = ReturnType<typeof createChatGraph>;
 
@@ -13,7 +13,7 @@ export class SearchService implements ISearchService {
 	async search(question: string) {
 		const res = await this.chatGraph.invoke({
 			question,
-			history: this.chatHistory,
+			history: this.chatHistory.formatHistoryText(),
 		});
 
 		this.chatHistory.addMessage({

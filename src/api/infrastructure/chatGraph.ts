@@ -7,7 +7,6 @@ import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { MdDocMetadata } from "./markdownProcessor.js";
 import { IterableReadableStream } from "@langchain/core/utils/stream";
 import { AIMessageChunk } from "@langchain/core/messages";
-import { ChatHistory } from "./chatHistory.js";
 import { BaseLanguageModelInput } from "@langchain/core/language_models/base";
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -114,7 +113,7 @@ const RootAnnotation = Annotation.Root({
 	search: Annotation<z.infer<typeof searchSchema>>, // current search params
 	context: Annotation<Document<MdDocMetadata>[]>, // retrieved docs
 	answer: Annotation<{ stream: IterableReadableStream<AIMessageChunk> }>,
-	history: Annotation<ChatHistory>,
+	history: Annotation<string>,
 	isEnough: Annotation<boolean>,
 });
 
@@ -125,7 +124,7 @@ function makeAnalyseQueryNode(deps: GraphDependencies) {
 		const { model } = deps;
 		const messages = await PROMPT_ANALYSE.invoke({
 			question: state.question,
-			history: state.history.formatHistoryText(),
+			history: state.history,
 		});
 
 		const result = await callWithStructuredOutput(
@@ -199,7 +198,7 @@ function makeGenerateAnswerNode(deps: GraphDependencies) {
 		const messages = await PROMPT_RAG.invoke({
 			question: state.question,
 			context: docsContent,
-			history: state.history.formatHistoryText(),
+			history: state.history,
 		});
 
 		return {

@@ -1,4 +1,4 @@
-import { ChatMessage } from "./chatGraph.js";
+import { ChatMessage } from "../infrastructure/chatGraph.js";
 
 export class ChatHistory {
 	private messages: ChatMessage[] = [];

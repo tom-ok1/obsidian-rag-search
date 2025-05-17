@@ -1,6 +1,5 @@
 import { createChatGraph, GraphDependencies } from "./chatGraph.js";
 import { Document } from "@langchain/core/documents";
-import { ChatHistory } from "./chatHistory.js";
 
 describe("chatGraph acceptance", () => {
 	const mockVectorStore = {
@@ -32,10 +31,9 @@ describe("chatGraph acceptance", () => {
 
 	it("should answer a user question with sufficient context", async () => {
 		const graph = createChatGraph(deps);
-		const history = new ChatHistory();
 		const result = await graph.invoke({
 			question: "What is doc1?",
-			history,
+			history: "dummy history",
 			search: {
 				searchType: "similarity",
 				query: "doc1",
@@ -64,10 +62,9 @@ describe("chatGraph acceptance", () => {
 			vectorStore: mockVectorStore as any,
 			model: model as any,
 		});
-		const history = new ChatHistory();
 		const result = await graph.invoke({
 			question: "What is doc1?",
-			history,
+			history: "dummy history",
 			search: { searchType: "similarity", query: "doc1", k: 8 },
 			context: [],
 			isEnough: false,
