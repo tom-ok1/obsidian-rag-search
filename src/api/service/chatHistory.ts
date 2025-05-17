@@ -1,4 +1,4 @@
-import { ChatMessage } from "../infrastructure/chatGraph.js";
+export type ChatMessage = { role: "user" | "assistant"; content: string };
 
 export class ChatHistory {
 	private messages: ChatMessage[] = [];

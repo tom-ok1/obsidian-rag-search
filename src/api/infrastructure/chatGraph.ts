@@ -9,8 +9,6 @@ import { IterableReadableStream } from "@langchain/core/utils/stream";
 import { AIMessageChunk } from "@langchain/core/messages";
 import { BaseLanguageModelInput } from "@langchain/core/language_models/base";
 
-export type ChatMessage = { role: "user" | "assistant"; content: string };
-
 export interface GraphDependencies {
 	vectorStore: VectorStore;
 	model: BaseChatModel;
