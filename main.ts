@@ -11,6 +11,7 @@ import {
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { ChatApp } from "src/components/Chat.js";
+import { ReindexPrompt } from "src/components/ReindexPrompt.js";
 import {
 	ChatModelProviders,
 	EmbeddingModelProviders,
@@ -74,6 +75,8 @@ const DEFAULT_SETTINGS: PluginSettings = {
 	googleProjectId: "",
 };
 
+const STORE_DIR = ".rag-chat";
+
 export default class RAGChatPlugin extends Plugin {
 	private serviceManager!: ServiceManager;
 	private chatView: ChatView | null;
@@ -81,13 +84,14 @@ export default class RAGChatPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
+		await this.initializeStoreDirectory();
 
 		this.serviceManager = ServiceManager.getInstance();
-		this.serviceManager.initContext(this.app, "test");
+		this.serviceManager.initContext(this.app, STORE_DIR);
 		await this.initializeChatModel();
 
 		this.registerView(VIEW_TYPE_CHAT, (leaf) => {
-			this.chatView = new ChatView(leaf);
+			this.chatView = new ChatView(leaf, this);
 			return this.chatView;
 		});
 		this.addSettingTab(new RAGSearchSettingsTab(this.app, this));
@@ -143,8 +147,9 @@ export default class RAGChatPlugin extends Plugin {
 		}
 	}
 
-	private async reindexDocuments() {
+	public async reindexDocuments() {
 		try {
+			await this.initializeStoreDirectory();
 			const filePaths = this.app.vault.getFiles().map(({ path }) => path);
 			const docService = this.serviceManager.getService("document");
 			await docService.reindex(filePaths);
@@ -169,6 +174,13 @@ export default class RAGChatPlugin extends Plugin {
 			.forEach((l) => l.detach());
 	}
 
+	private async initializeStoreDirectory() {
+		const isExist = await this.app.vault.adapter.exists(STORE_DIR);
+		if (!isExist) {
+			await this.app.vault.adapter.mkdir(STORE_DIR);
+		}
+	}
+
 	async loadSettings() {
 		this.settings = Object.assign(
 			{},
@@ -188,7 +200,7 @@ const VIEW_TYPE_CHAT = "rag-chat-react";
 export class ChatView extends ItemView {
 	private root?: ReactDOM.Root;
 
-	constructor(leaf: WorkspaceLeaf) {
+	constructor(leaf: WorkspaceLeaf, private readonly plugin: RAGChatPlugin) {
 		super(leaf);
 	}
 
@@ -205,11 +217,35 @@ export class ChatView extends ItemView {
 		container.empty();
 
 		this.root = ReactDOM.createRoot(container);
-		this.resetSearchService();
+		await this.resetSearchService();
 	}
 
 	async resetSearchService() {
-		this.root?.render(React.createElement(ChatApp));
+		if (!this.root) return;
+
+		if (await this.checkStoreExists()) {
+			this.root.render(React.createElement(ChatApp));
+			return;
+		}
+
+		this.root.render(
+			React.createElement(ReindexPrompt, {
+				onReindex: async () => {
+					await this.plugin.reindexDocuments();
+					await this.resetSearchService();
+				},
+			})
+		);
+	}
+
+	private async checkStoreExists() {
+		const isExist = await this.app.vault.adapter.exists(STORE_DIR);
+		if (!isExist) return false;
+		const files = await this.app.vault.adapter.list(STORE_DIR);
+		if (files.files.length > 0) {
+			return true;
+		}
+		return false;
 	}
 
 	async onClose() {
