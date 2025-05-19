@@ -92,7 +92,12 @@ export function useChatStream() {
 		}
 	};
 
-	return { messages, isLoading, ask };
+	const resetChat = () => {
+		history.clear();
+		setMessages([]);
+	};
+
+	return { messages, isLoading, ask, resetChat };
 }
 
 function formatChatContent(content: MessageContent) {

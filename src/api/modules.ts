@@ -25,6 +25,7 @@ export interface IDocumentService {
 export interface IChatHistory {
 	addMessage(message: ChatMessage): void;
 	getMessages(): ChatMessage[];
+	clear(): void;
 }
 
 interface ServiceMap {
