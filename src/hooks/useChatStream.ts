@@ -5,6 +5,7 @@ import { ServiceManager } from "src/api/modules.js";
 
 export function useChatStream() {
 	const serviceManager = ServiceManager.getInstance();
+	const history = serviceManager.getService("history");
 	const chatService = serviceManager.getService("search");
 	const [messages, setMessages] = useState<ChatContent[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
@@ -63,6 +64,10 @@ export function useChatStream() {
 					...newMessages[assistantMsgIndex],
 					loading: false,
 				};
+
+				history.addMessage(newMessages[assistantMsgIndex - 1]); // userMsg
+				history.addMessage(newMessages[assistantMsgIndex]); // assistantMsg
+
 				return newMessages;
 			});
 		} catch (err) {

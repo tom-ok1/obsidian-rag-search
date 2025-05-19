@@ -77,7 +77,6 @@ const DEFAULT_SETTINGS: PluginSettings = {
 export default class RAGChatPlugin extends Plugin {
 	private serviceManager!: ServiceManager;
 	private chatView: ChatView | null;
-	private readonly STORAGE_KEY = "rag-search-fileMtimeMap";
 	settings: PluginSettings;
 
 	async onload() {
