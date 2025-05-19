@@ -20,41 +20,6 @@ const searchSchema = z.object({
 		.describe(
 			"Search query: rewrite the user's natural-language request into a concise, keyword-focused sentense suitable for a vector database. Make sure to use the same language as the original question."
 		),
-	searchType: z
-		.enum(["similarity", "mmr"])
-		.nullable()
-		.describe(
-			"Search mode: 'similarity' for basic similarity search, 'mmr' for more advanced search using max marginal relevance, which allows for more diverse results."
-		),
-	k: z.number().describe("Number of documents to return (1-40)."),
-	fetchK: z
-		.number()
-		.nullable()
-		.optional()
-		.describe(
-			"For MMR: number of documents to fetch before re-ranking (1-100). Only needed for MMR search."
-		),
-	lambda: z
-		.number()
-		.nullable()
-		.optional()
-		.describe(
-			"For MMR: diversity parameter (0 = maximum diversity, 1 = minimum diversity). Only needed for MMR search. Default is 0.6."
-		),
-});
-
-const evalSchema = z.object({
-	isEnough: z
-		.boolean()
-		.describe(
-			"Whether the current set of documents sufficiently answers the user's question."
-		),
-	nextParams: searchSchema
-		.nullable()
-		.optional()
-		.describe(
-			"If not enough, the LLM's suggested updated search parameters for the next retrieval round."
-		),
 });
 
 const PROMPT_ANALYSE = ChatPromptTemplate.fromMessages([
@@ -69,24 +34,6 @@ const PROMPT_ANALYSE = ChatPromptTemplate.fromMessages([
 			"{history}\n\n",
 			"### Latest question\n",
 			"{question}",
-		].join(""),
-	],
-]);
-
-const PROMPT_EVAL = ChatPromptTemplate.fromMessages([
-	[
-		"system",
-		"You are an assistant that evaluates whether the retrieved documents adequately cover the user's question. If there are not enough documents, suggest new search parameters to improve the results. Please respond strictly in JSON following the provided schema.",
-	],
-	[
-		"user",
-		[
-			"User question:\n",
-			"{query}\n\n",
-			"Retrieved documents (each separated by a blank line):\n",
-			"{docs}\n\n",
-			"Previous search parameters:\n",
-			"{search}\n\n",
 		].join(""),
 	],
 ]);
@@ -112,10 +59,9 @@ const RootAnnotation = Annotation.Root({
 	context: Annotation<Document<MdDocMetadata>[]>, // retrieved docs
 	answer: Annotation<{ stream: IterableReadableStream<AIMessageChunk> }>,
 	history: Annotation<string>,
-	isEnough: Annotation<boolean>,
 });
 
-export type GraphState = typeof RootAnnotation.State;
+type GraphState = typeof RootAnnotation.State;
 
 function makeAnalyseQueryNode(deps: GraphDependencies) {
 	return async (state: GraphState) => {
@@ -136,6 +82,7 @@ function makeAnalyseQueryNode(deps: GraphDependencies) {
 }
 
 function makeRetrieveNode(deps: GraphDependencies) {
+	const RETRIEVAL_K = 8;
 	return async (state: GraphState) => {
 		const { vectorStore } = deps;
 		const { search } = state;
@@ -143,48 +90,12 @@ function makeRetrieveNode(deps: GraphDependencies) {
 		if (!search) throw new Error("Search parameters missing");
 
 		// Decide which vector store function to call.
-		const docs =
-			search.searchType === "mmr" &&
-			vectorStore.maxMarginalRelevanceSearch
-				? await vectorStore.maxMarginalRelevanceSearch(
-						search.query,
-						{
-							k: search.k,
-							fetchK: search.fetchK ?? search.k * 4,
-							lambda: search.lambda ?? 0.6,
-						},
-						undefined
-				  )
-				: await vectorStore.similaritySearch(search.query, search.k);
+		const docs = await vectorStore.similaritySearch(
+			search.query,
+			RETRIEVAL_K
+		);
 
 		return { context: docs };
-	};
-}
-
-function makeEvaluateNode(deps: GraphDependencies) {
-	let attempts = 0;
-	const MAX_RETRIES = 3;
-	return async (state: GraphState) => {
-		const { model } = deps;
-
-		if (attempts >= MAX_RETRIES) return { isEnough: true };
-		attempts += 1;
-
-		const docText = state.context.map((d) => d.pageContent).join("\n\n");
-		const messages = await PROMPT_EVAL.invoke({
-			query: state.question,
-			docs: docText,
-			search: state.search,
-		});
-
-		const result = await callWithStructuredOutput(
-			model,
-			evalSchema,
-			messages
-		);
-		return result.isEnough
-			? { isEnough: true }
-			: { isEnough: false, search: result.nextParams ?? state.search };
 	};
 }
 
@@ -209,14 +120,10 @@ export function createChatGraph(deps: GraphDependencies) {
 	const graph = new StateGraph(RootAnnotation)
 		.addNode("analyseQuery", makeAnalyseQueryNode(deps))
 		.addNode("retrieveData", makeRetrieveNode(deps))
-		.addNode("evaluateContext", makeEvaluateNode(deps))
 		.addNode("generateAnswer", makeGenerateAnswerNode(deps))
 		.addEdge("__start__", "analyseQuery")
 		.addEdge("analyseQuery", "retrieveData")
-		.addEdge("retrieveData", "evaluateContext")
-		.addConditionalEdges("evaluateContext", (s) =>
-			s.isEnough ? "generateAnswer" : "retrieveData"
-		)
+		.addEdge("retrieveData", "generateAnswer")
 		.addEdge("generateAnswer", "__end__")
 		.compile();
 

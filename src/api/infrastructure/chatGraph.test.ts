@@ -35,12 +35,9 @@ describe("chatGraph acceptance", () => {
 			question: "What is doc1?",
 			history: "dummy history",
 			search: {
-				searchType: "similarity",
 				query: "doc1",
-				k: 8,
 			},
 			context: [],
-			isEnough: false,
 		});
 		expect(result.answer).toBeDefined();
 	});
@@ -65,9 +62,8 @@ describe("chatGraph acceptance", () => {
 		const result = await graph.invoke({
 			question: "What is doc1?",
 			history: "dummy history",
-			search: { searchType: "similarity", query: "doc1", k: 8 },
+			search: { query: "doc1" },
 			context: [],
-			isEnough: false,
 		});
 		expect(result.answer).toBeDefined();
 		expect(callCount).toBeGreaterThan(1);

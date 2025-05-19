@@ -1,5 +1,5 @@
 import React from "react";
-import { Paper, Stack, Skeleton, Typography, useTheme } from "@mui/material";
+import { Paper, Stack, Skeleton, Typography } from "@mui/material";
 import { CopyTooltip } from "./CopyTooltip.js";
 import { motion } from "framer-motion";
 import { ChatContent } from "../types/messages.js";
@@ -13,7 +13,6 @@ export const MessageBubbleUser: React.FC<MessageBubbleUserProps> = ({
 	msg,
 	style,
 }) => {
-	const theme = useTheme();
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 8 }}
@@ -29,10 +28,8 @@ export const MessageBubbleUser: React.FC<MessageBubbleUserProps> = ({
 					px: 2,
 					py: 1.5,
 					alignSelf: "flex-end",
-					bgcolor: theme.palette.primary.main,
-					color: theme.palette.getContrastText(
-						theme.palette.primary.main
-					),
+					bgcolor: "var(--background-primary)",
+					color: "var(--text-normal)",
 					whiteSpace: "pre-wrap",
 					backgroundImage: "none",
 					userSelect: "text",
@@ -63,7 +60,6 @@ export const MessageBubbleAssistant: React.FC<MessageBubbleAssistantProps> = ({
 	style,
 }) => {
 	const showSkeleton = msg.loading && msg.content === "";
-	const theme = useTheme();
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 8 }}
@@ -80,9 +76,7 @@ export const MessageBubbleAssistant: React.FC<MessageBubbleAssistantProps> = ({
 					py: 1.5,
 					alignSelf: "flex-start",
 					bgcolor: "transparent",
-					color: theme.palette.getContrastText(
-						theme.palette.primary.main
-					),
+					color: "var(--text-normal)",
 					whiteSpace: "pre-wrap",
 					backgroundImage: "none",
 					userSelect: "text",
