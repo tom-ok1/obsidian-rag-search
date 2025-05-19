@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { ChatContent } from "../types/messages.js";
 import { MessageContent } from "@langchain/core/messages";
-import { ISearchService } from "src/api/modules.js";
+import { ServiceManager } from "src/api/modules.js";
 
-export function useChatStream(chatService: ISearchService) {
+export function useChatStream() {
+	const serviceManager = ServiceManager.getInstance();
+	const chatService = serviceManager.getService("search");
 	const [messages, setMessages] = useState<ChatContent[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
 

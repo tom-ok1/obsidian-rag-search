@@ -88,7 +88,7 @@ export default class RAGChatPlugin extends Plugin {
 		await this.initializeChatModel();
 
 		this.registerView(VIEW_TYPE_CHAT, (leaf) => {
-			this.chatView = new ChatView(leaf, this.serviceManager);
+			this.chatView = new ChatView(leaf);
 			return this.chatView;
 		});
 		this.addSettingTab(new RAGSearchSettingsTab(this.app, this));
@@ -189,10 +189,7 @@ const VIEW_TYPE_CHAT = "rag-chat-react";
 export class ChatView extends ItemView {
 	private root?: ReactDOM.Root;
 
-	constructor(
-		leaf: WorkspaceLeaf,
-		private readonly serviceManager: ServiceManager
-	) {
+	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
 	}
 
@@ -213,10 +210,7 @@ export class ChatView extends ItemView {
 	}
 
 	async resetSearchService() {
-		const searchService = this.serviceManager.getService("search");
-		this.root?.render(
-			React.createElement(ChatApp, { chat: searchService })
-		);
+		this.root?.render(React.createElement(ChatApp));
 	}
 
 	async onClose() {
