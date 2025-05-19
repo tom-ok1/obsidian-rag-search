@@ -5,7 +5,7 @@ import { AIMessageChunk } from "@langchain/core/messages";
 import { IterableReadableStream } from "@langchain/core/utils/stream";
 import { App } from "obsidian";
 import { createChatGraph } from "src/api/infrastructure/chatGraph.js";
-import { ChatHistory } from "src/api/service/chatHistory.js";
+import { ChatHistory, ChatMessage } from "src/api/service/chatHistory.js";
 import { MarkdownProcessor } from "src/api/infrastructure/markdownProcessor.js";
 import { OramaStore } from "src/api/infrastructure/vectorStore.js";
 import { DocumentService } from "src/api/service/document.js";
@@ -22,10 +22,15 @@ export interface IDocumentService {
 	reindex(filePaths: string[]): Promise<void>;
 }
 
+export interface IChatHistory {
+	addMessage(message: ChatMessage): void;
+	getMessages(): ChatMessage[];
+}
+
 interface ServiceMap {
 	search: ISearchService;
 	document: IDocumentService;
-	history: ChatHistory;
+	history: IChatHistory;
 }
 
 type Nullable<T> = {

@@ -1,6 +1,8 @@
+import { IChatHistory } from "../modules.js";
+
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
-export class ChatHistory {
+export class ChatHistory implements IChatHistory {
 	private messages: ChatMessage[] = [];
 
 	addMessage(message: ChatMessage): ChatMessage {
