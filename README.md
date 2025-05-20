@@ -2,6 +2,8 @@
 
 This plugin enables Retrieval-Augmented Generation (RAG) search capabilities within Obsidian. It allows you to search your notes using advanced language models and embeddings.
 
+![demo](./demo.gif)
+
 ## Features
 
 -   Search your Obsidian vault using RAG (Retrieval-Augmented Generation).
