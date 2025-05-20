@@ -1,6 +1,6 @@
 # Obsidian RAG Search Plugin
 
-This plugin enables Retrieval-Augmented Generation (RAG) search capabilities within Obsidian. It allows you to search your notes using advanced language models and embeddings.
+This plugin provides AI-powered search functionality (RAG: Retrieval-Augmented Generation) within Obsidian. It comes bundled with OramaDB and LangChain, enabling advanced RAG capabilities without any additional installation or configuration. By targeting your Obsidian notes, it extracts relevant information in response to natural language questions and generates answers using AI.
 
 ![demo](./demo.gif)
 
@@ -10,6 +10,14 @@ This plugin enables Retrieval-Augmented Generation (RAG) search capabilities wit
 -   Supports multiple chat and embedding model providers (OpenAI, Google Vertex AI, Anthropic).
 -   Supports Japanese and English languages.
 -   The plugin is theoretically capable of handling large Vaults by utilizing shard splitting.
+-   Built with OramaDB for efficient vector storage and LangChain for RAG implementation.
+
+## Technical Implementation
+
+The plugin leverages:
+
+-   **OramaDB**: A lightweight and efficient vector database for storing and retrieving document embeddings
+-   **LangChain**: For implementing the RAG pipeline, connecting the retrieval and generation components
 
 ## Getting Started
 
