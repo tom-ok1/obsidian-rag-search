@@ -2,7 +2,7 @@
 	"name": "obsidian-rag-search",
 	"version": "1.0.0",
 	"type": "module",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "",
 	"main": "main.js",
 	"scripts": {
 		"dev": "vite build --mode development --watch",
