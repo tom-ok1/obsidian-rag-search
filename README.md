@@ -7,6 +7,7 @@ This plugin enables Retrieval-Augmented Generation (RAG) search capabilities wit
 -   Search your Obsidian vault using RAG (Retrieval-Augmented Generation).
 -   Supports multiple chat and embedding model providers (OpenAI, Google Vertex AI, Anthropic).
 -   Supports Japanese and English languages.
+-   The plugin is theoretically capable of handling large Vaults by utilizing shard splitting.
 
 ## Getting Started
 
