@@ -1,94 +1,51 @@
-# Obsidian Sample Plugin
+# Obsidian RAG Search Plugin
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+This plugin enables Retrieval-Augmented Generation (RAG) search capabilities within Obsidian. It allows you to search your notes using advanced language models and embeddings.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+## Features
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+-   Search your Obsidian vault using RAG (Retrieval-Augmented Generation).
+-   Supports multiple chat and embedding model providers (OpenAI, Google Vertex AI, Anthropic).
+-   Supports Japanese and English languages.
 
-## First time developing plugins?
+## Getting Started
 
-Quick starting guide for new plugin devs:
+### 1. Set Up API Keys
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+Go to the plugin settings and enter your API keys for the providers you wish to use (OpenAI, Google, Anthropic).
 
-## Releasing new releases
+### 2. Select Models
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+In the settings, choose your preferred chat model and embedding model. Only certain models are supported; available options are shown in the dropdowns.
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+### 3. Reindex Documents
 
-## Adding your plugin to the community plugin list
+After configuring your models, reindex your vault:
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+-   Use the command palette and run `reindex documents`, or
+-   Use the UI prompt if you open the chat view before indexing.
 
-## How to use
+This will prepare your notes for RAG-based search.
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+### 4. Start Searching
 
-## Manually installing the plugin
+Open the RAG Chat view from the ribbon icon or command palette. You can now interact with your notes using the selected models.
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+## Supported Models
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
+The list of supported chat and embedding models is limited and defined in the code. For embeddings, examples include:
 
-## Funding URL
+-   OpenAI: `text-embedding-3-small`, `text-embedding-3-large`
+-   Google Vertex AI: `text-embedding-004`
 
-You can include funding URLs where people who use your plugin can financially support it.
+For chat models, options include OpenAI (e.g., `gpt-4o`), Anthropic, and Google Gemini models.
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+## Notes
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
+-   You must reindex your documents whenever you change the embedding model or add new notes.
+-   API keys are stored securely in your Obsidian settings.
+-   The plugin creates a `.rag-chat` directory in your vault for storing vector data.
 
-If you have multiple URLs, you can also do:
+## License
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
-
-## API Documentation
-
-See https://github.com/obsidianmd/obsidian-api
+See [LICENSE](./LICENSE) for details.
