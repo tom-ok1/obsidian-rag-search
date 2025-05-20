@@ -9,14 +9,34 @@ export class DocumentService implements IDocumentService {
 	) {}
 
 	async reindex(filePaths: string[]) {
-		await this.vectorStore.reset();
-		const processedMarkdownFiles =
-			await this.markdownProcessor.processMarkdownFiles(filePaths);
-		const documents = processedMarkdownFiles.map((file) => ({
-			id: file.id,
-			pageContent: file.content,
-			metadata: file.documentMetadata,
-		}));
-		await this.vectorStore.addDocuments(documents);
+		try {
+			await this.vectorStore.reset();
+
+			// Process files in batches of 500
+			const BATCH_SIZE = 500;
+			const batches = this.splitIntoBatches(filePaths, BATCH_SIZE);
+
+			for (const batch of batches) {
+				const processedMarkdownFiles =
+					await this.markdownProcessor.processMarkdownFiles(batch);
+				const documents = processedMarkdownFiles.map((file) => ({
+					id: file.id,
+					pageContent: file.content,
+					metadata: file.documentMetadata,
+				}));
+				await this.vectorStore.addDocuments(documents);
+			}
+		} catch (error) {
+			await this.vectorStore.reset();
+			throw new Error(`Reindexing failed: ${error.message}`);
+		}
+	}
+
+	private splitIntoBatches<T>(items: T[], batchSize: number): T[][] {
+		const batches: T[][] = [];
+		for (let i = 0; i < items.length; i += batchSize) {
+			batches.push(items.slice(i, i + batchSize));
+		}
+		return batches;
 	}
 }
